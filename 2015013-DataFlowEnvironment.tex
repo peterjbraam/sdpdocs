@@ -1,10 +1,27 @@
 %rubber: module pdflatex
 \documentclass[11pt,a4paper]{article}
 \usepackage{microtype}\usepackage{mathptmx}
-
 \usepackage{sdp_doc} % SDP style file
 \usepackage[english]{babel} 
 \usepackage{listings}
+
+\usepackage{amsthm}
+\usepackage{thmtools}
+\usepackage[dvipsnames]{xcolor}
+
+\declaretheoremstyle[spaceabove=6pt, spacebelow=6pt,
+headfont=\normalfont\bfseries,
+notefont=\mdseries, notebraces={(}{)},
+bodyfont=\normalfont,
+postheadspace=1em,
+headpunct=\\,
+notebraces=\ \ ,
+qed=]{ExampleStyle}
+\declaretheorem[style=ExampleStyle,shaded={rulecolor=Lavender,
+rulewidth=2pt, bgcolor={rgb}{1,1,1}}]{Example}
+
+
+
 
 \definecolor{antiquewhite}{rgb}{0.98, 0.92, 0.84}
 
@@ -271,19 +288,20 @@ Nodes in the graph without output channels represent results of the dataflow pro
 All actors and channels may compute concurrently but do not share any
 data objects. The ownership of data objects, i.e. the locality of the
 objects in the graph, is a central conceptual benefit\footnote{The
-  converse drawback is that the lack of shared data requires
-  duplication of data when they are mutable and accessible from more
-  than one actor. The impact of this is generally reduced by having
-  smaller tokens, i.e., data objects, passing on channels. Duplication
-  of data in order to enable scalable parallelism is adopted in the
-  SDP Architecture document as one of the necessary ways of enabling
-  scalability.} of data flow computing because the exclusive access to
-the data objects by defined elements of the data flow graph introduces
-modularity. Indeed, the most common problem in multithreading legacy
-imperative programs is identifying concurrent data access.
+  converse of this is that there is a drawback in that the lack of
+  shared data requires duplication of data when they are mutable and
+  accessible from more than one actor. The impact of this can
+  generally be reduced by having smaller tokens, i.e., data objects,
+  passing on channels. Duplication of data in order to enable scalable
+  parallelism is adopted in the SDP Architecture document as one of
+  the necessary ways of enabling scalability.} of data flow computing
+because the exclusive access to the data objects by defined elements
+of the data flow graph introduces modularity. Indeed, the most common
+problem in multithreading legacy imperative programs is identifying
+concurrent data access.
 
 
-\subsection{An example data Flow Program}
+\begin{Example}[A simple dataflow program]
 
 A good example is a program that reads a vector and sums up the coordinates.  The input node reads the vector, hands this vector to an actor.  The actor is fired when the vector is e.g. in memory and then the actor adds the elements and writes the output.
 
@@ -336,24 +354,89 @@ often that of a family of graphs.  The description also lacks clarity
 regarding how the actors are created and how the program is executed,
 and this is what we turn to next.
 
+\end{Example}
 
 
 
 
-\subsection{Some title}
+\section{Dataflow Systems}
 
-And some text.
+\subsection{Scheduling, Parallelization and Availability}
 
-\subsubsection{A smaller title for a little subsubsection}
+To express the instantiation of a program and its execution more
+clearly the dataflow system should be able to recognize a description
+of the available (possibly clustered) compute resources, the so called
+cluster architecture descriptor (CAD).  It must be able to create the
+actors on resources, and start their execution.  This is expressed in
+the pseudo code by modifying the master\_actor:
 
-And a bit of text.
+\begin{lstlisting}
+master_actor (fileName, CAD)
+computeNodes = schedule(N-1, CAD)
+   collectorNode = schedule(1, CAD)
+   fork(nodes:computeNodes, process:compute_actor, output:collectorProc, 
+   param:filename, crash:ignore) -- only get input upon fork
+   fork(nodes:collectorNode, process:collector_actor, input:computeNodes)
+   result = wait(collectorProc)
+   start
+\end{lstlisting}
+
+We see that the modifications are twofold: we schedule the N-1
+resources using the schedule function to run actors; the additional
+parameter is the CAD --- the cluster architecture descriptor.
+Secondly after setting up the actors and data dependencies (in this
+case the master\_actor simply waits for the collector) we start the
+program.  Start, schedule, join, wait and fork are examples of
+functionality provided by the dataflow system.
+
+We see that dataflow programs can indeed be executed in distributed
+compute environments, but can also form a good model for a program on
+a single threaded node.  Second, our example shows that an arbitrarily
+large graph can be created simply through a parameter by scheduling
+more actors.  Data flow programs can also utilize accelerators to
+which channels can directly deliver data objects, provided the data
+flow system provides such features.  All such decisions are part of
+scheduling.  A few further elaborations can be made.
+
+\subsection{Optimisation and separation of functionality and scheduling}
+
+First a refined scheduler may use a model to predict performance and attempt to optimize scheduling using the CAD: for example it might find GPU’s are available and if the option exists in the program use GPU actors to accelerate the additions further.    
+
+A fundamental important feature is that the functionality is contained in the description of the actors and their dependencies on data from the channels.  Provided that this description contains some parameters, such as offering the chunking into sub vectors on a variable number of nodes in our example, the scheduling can be used to optimize the execution within this parameter space without changing the functionality of the program.  The schedule can be independently modified from the functionality without risk to the correctness of the program.
+
+It may also dynamically schedule the dataflow and allow the program to process initial data, and later adapt the distribution of new data objects to observed performance.  Dynamic scheduling could also allow the creation of less or more actors to optimize performance as the execution proceeds. 
+
+Second if failures happen, the data flow program may indicate (using features of a suitable dataflow system) what should be done.   In our current example we have at least two obvious options if a single actor were to crash: one is to ignore it (aka the fail-out model) and inform the collector to simply gather the sums that do arrive and ignore the absence of the sum from the crashed actor.  The second choice would be to inform the master that that the entire program should be aborted.
+
+\subsection{The implementation of Kernels, Dataflow and Domain Specific Languages}
+
+While many dataflow systems are closely tied to a particular programming language, it is our aim to write dataflow programs that can incorporate finely tuned kernels as parts of actors or channels.  Such kernels may perform specific numerical functions such as Fourier transforms, or refined I/O. The kernels may be best written in a language optimal for that purpose: e.g. Cuda for using a GPU or C++ for an SMP system, or C for a carefully tuned I/O channel. 
+The organization of the data flow program at a high level is probably more efficiently done in a higher level language.
+What emerges is a program written in a language that utilizes:
+(A) pre-existing data flow primitives from the dataflow system, including those for scheduling
+(B) interfaces to the kernels required for the specific SKA SDP application.
+Hence the data flow programs are written in a domain specific language (DSL) offering A and B. 
+
+\subsection{Distributed profiling and debugging of data flow programs}
+
+The data object transfer times and the actor execution times are
+natural performance metrics of a data flow program that are useful to
+monitor and to use for optimal scheduling.  There is naturally a small
+overhead in the invocation of actors and in the transfer of data
+objects, and precisely when this overhead becomes significant is an
+indication that the data flow should be re-organized to use larger
+objects, for which the overheads are negligible.  Other issues, such
+as frequent cache misses or hotspots can be found using the profiling
+of general software programs.  While operating system supported
+infrastructure such as the performance counters aid this enormously,
+in this area there are some challenges, namely to conveniently
+identify the origins of the hotspots in the call stacks (as opposed to
+at the instruction address level).
 
 
-\clearpage
-\section{Conclusions}
-\label{section:conclusions}
 
-And here also.
+
+
 
 
 %  Add the bibliography
