@@ -1,0 +1,370 @@
+%rubber: module pdflatex
+\documentclass[11pt,a4paper]{article}
+\usepackage{microtype}\usepackage{mathptmx}
+
+\usepackage{sdp_doc} % SDP style file
+\usepackage[english]{babel} 
+\usepackage{listings}
+
+\definecolor{antiquewhite}{rgb}{0.98, 0.92, 0.84}
+
+\lstset{ %
+  backgroundcolor=\color{antiquewhite},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  captionpos=b,                    % sets the caption-position to bottom
+  frame=single}
+
+
+%%%%%%%%% START OF USER SETTINGS %%%%%%%%%%%%%%%%%%
+
+% Enter here some information needed to fill in the template Title to appear
+% on the front pages (will be filled in via the \sdpfrontpage command)
+\newcommand{\bigdoctitle}{SDP Dataflow Environment\xspace}
+% Title to go in the "Document Status Sheet" Document number
+\newcommand{\docnr}{RP\_A0999\xspace}
+% Context
+\newcommand{\context}{(SDP Work Package)}
+% Revision
+\newcommand{\revision}{0.92\xspace}
+% Author(s)
+\newcommand{\docauthor}{B.\ Nikolic, P.\ Braam\xspace}
+% Lead author (goes in the footer)
+\newcommand{\leadauthor}{B.\ Nikolic\xspace}
+% Release
+\newcommand{\release}{1.0\xspace}
+% Date of the document release, format: Month YYYY (e.g., August 2008)
+\newcommand{\docudate}{YYYY-MM-DD\xspace}
+% Document classification
+\newcommand{\classification}{Unrestricted}
+% Status of the document (draft/final/etc.)
+\newcommand{\docstatus}{Draft\xspace}
+
+
+% Table with signatures
+\newcommand{\signaturetable}{
+  \begin{tabularx}{\textwidth}{|X|X|X|}
+      \hline
+      Name & Designation & Affilitation\\
+      \hline
+      & & \\
+      \hline
+      Signature \& Date: & & \\
+      & & \\
+      & & \\
+      \hline
+  \end{tabularx}
+}
+
+  % Table with version numbers
+  \newcommand{\versiontable}{
+  \begin{tabularx}{\textwidth}{|X|X|X|X|}
+        \hline
+        \bf{Version} & {\bf Date of issue} & {\bf Prepared by} & {\bf Comments}\\
+        \hline
+        1.0 & & & \\
+        \hline
+      \end{tabularx}
+  }
+
+% Table with affiliations
+\newcommand{\organisationtable}{
+\begin{center}
+ \sffamily{\bf ORGANISATION DETAILS}\end{center}
+    \begin{table}[htbp]
+      \centering
+      \begin{tabular}[htbp]{|l|l|}
+        \hline
+        Name & Science Data Processor Consortium\\
+        \hline
+      \end{tabular}
+    \end{table}
+  }
+
+%%%%%%%%%%%%% END OF USER SETTINGS %%%%%%%%%%%%%%%%%%%
+
+
+
+\begin{document}
+
+% load automatic pages
+\sdpfrontpage
+
+\sdptableofcontents
+
+% Add here the abbreviations used in your document
+\sdplistofabbreviations
+\begin{basedescript}{\desclabelstyle{\pushlabel}\desclabelwidth{6em}}
+    \item[SOMETHING] Something \vspace{-0.2cm}
+    \item[OTHER] Other something \vspace{-0.2cm}
+    \item[OTHER] Other other something \vspace{-0.2cm}
+\end{basedescript} 
+
+% Add here the symbols used in your document
+\sdplistofsymbols
+\begin{basedescript}{\desclabelstyle{\pushlabel}\desclabelwidth{6em}}
+    \item[$N_\mathrm{something}$] Number of somethings \vspace{-0.2cm}
+    \item[OTHER] Other something \vspace{-0.2cm}
+    \item[OTHER] Other other something \vspace{-0.2cm}
+\end{basedescript} 
+
+
+\sdplistoffigures
+
+\sdplistoftables
+
+% Add here the executive summary
+\sdpsummary
+
+The purpose of this document is to familiarise the reader with the
+dataflow programming model and describe why this model is likely to
+satisfy the requirements of the Science Data Processor. We then
+describe concepts that accompany a data flow system, and the
+relationship between the SDP systems architecture and the data flow
+system.  Coverage of these four topics makes up the central sections
+of this document.  A glossary at the end of this defines terminology.
+The remainder of the introduction tries to describe at what level of
+detail the current exposition proceeds.
+
+% Add to the table the list of applicable and reference documents
+% (this is NOT meant for your usual bibiliography, only for SKA docs)
+\sdpreferencedocs
+
+\subsection*{Applicable Documents}
+
+The following documents are applicable to the extent stated herein. In the
+event of conflict between the contents of the applicable documents and this
+document, \emph{the applicable documents} shall take precedence.
+
+\begin{center}{
+\begin{tabularx}{\textwidth}{|X|X|}
+    \hline
+    \bf{Reference} & \bf{Reference}\\
+    \bf{Number} & \\
+    \hline
+\end{tabularx}}
+\end{center}
+
+\subsection*{Reference Documents}
+
+The following documents are referenced in this document. In the event of
+conflict between the contents of the referenced documents and this document,
+\emph{this document} shall take precedence.
+
+\begin{center}{
+\begin{tabularx}{\textwidth}{|X|X|}
+    \hline
+    \bf{Reference} & \bf{Reference}\\
+    \bf{Number} & \\
+    \hline
+\end{tabularx}}
+\end{center}
+
+
+
+
+% The actual content goes here
+\newpage
+\section{Introduction}
+
+We use the words dataflow {\bf program} for the domain specific
+description of the computation that needs to done, e.g., the imaging
+pipeline for a radio telescope.  We distinguish this from the dataflow
+{\bf system}, which refers to a particular implementation enabling one
+to write such programs. For example, a dataflow programming language
+or a library with C-like API can both be dataflow systems.  We use the
+words computing {\bf system architecture} to describe the hardware
+environment on which the dataflow programs and the runtime of the
+dataflow system can execute.  Finally, we use the words dataflow {\bf
+  environment} to describe all the components - the dataflow programs,
+the dataflow system and the computing system architecture - together
+to discuss for example the actual execution of programs on a cluster
+of computers.
+
+Although in the past there have been hardware designs that
+specifically map dataflow concepts onto the computing system
+architecture, this is not envisaged for the SDP. Instead the SDP will
+embed the dataflow concepts in the upper software layers which will be
+executed on commodity hardware and on top more conventional software
+layers.
+
+{\bf Conceptually,} computations in dataflow programs are triggered
+not by fetching instructions sequentially but by the availability of
+input data objects.  There is a vast literature concerning systems
+with this kind of behaviour \citep[see the review
+by][]{Johnston:2004:ADP:1013208.1013209}, and there are numerous
+variations on the concepts and numerous detailed choices in these
+concepts.  First, it is important to mention that some dataflow models
+have been described and studied in mathematical detail, such as
+\cite{Hewitt:1973:UMA:1624775.1624804} actor model, while other data
+flow models are merely add-on libraries to general purpose programming
+languages.
+
+Similar variations exist in terms of typing the data that is
+exchanged: it is sometimes precisely typed and in other systems merely
+a buffer. Secondly we will just illustrate a few examples of alternate
+choices in data flow systems:
+\begin{enumerate}
+  \item When describing the availability of data
+  to trigger computation, must just one or all of multiple pieces of
+  data be available to define readiness?  
+\item Do the channels have a large or finite buffer space?
+\end{enumerate}
+This document does neither recommend detailed choices of features or
+particular choices of dataflow systems.  Instead, it is concerned with
+an explanation of the high level application of data flow techniques
+to SDP imaging, and requirements for dataflow systems that must or
+should be met.
+
+\section{Dataflow Programs}
+
+\subsection{Concepts in dataflow programming}
+
+In a data flow-programming environment the execution of computation by
+\underline{actors} is triggered by the readiness of \underline{data
+  objects} on the inputs of these actors.  Data objects are the units
+of data, which are transmitted between actors through channels (which
+may transform the data). The arrival of entire object determines
+readiness: objects can be large structures such as arrays of numbers
+but the dataflow program treats them as indivisible tokens.  The fact
+that a computation is triggered does not mean it has to begin
+executing immediately upon the trigger: it could be placed in set of
+ready to execute (“fireable”) actions and executed some time later. In
+demand-driven dataflow programs the actions to execute from the
+fireable set are determined by tracing back from the desired outputs
+of the program to all intermediate actions that produce intermediate
+data products, and so it is even possible that not all triggered
+actions get executed. In data-driven dataflow programs all fireable
+actions are executed, usually using a queue system if not immediately
+upon the trigger.
+
+
+The structure of a data flow program therefore specifies how initial
+data is provided to the system and what happens when data flows
+through actors to a final output.
+
+
+What we describe above is called the data flow graph or data
+dependency graph: the actors are the nodes of the graph and the
+channels are its edges. As we will see momentarily, although such
+graph is a precise conceptual representation of the dataflow program,
+the dataflow programs are not usually specified by explicitly
+instantiating such a graph, but rather with more conventional
+programming language mechanisms. In fact, scalable dataflow
+\citep{Bosilca6008964,Wozniak:2012:TDD:2443416.2443421} systems never
+instantiate the full graph but traverse it symbolically and
+instantiate explicitly only a small windows around which execution is
+happening.
+
+Input nodes of the graph, i.e. nodes without input channels represent
+input data for a dataflow program.  Upon program start, input nodes
+start delivering data objects to their output channels and it is often
+convenient to identify the input nodes with their output
+channels. Input nodes may be triggered for delivery multiple
+times\footnote{In case of the SDP the dimensions of the input data are
+  determined by the scheduling block being observed and so are known
+  in advance of the beginning of execution of the dataflow program.}.
+
+Nodes in the graph without output channels represent results of the dataflow program.
+
+\subsection{Concurrency model}
+ 
+All actors and channels may compute concurrently but do not share any
+data objects. The ownership of data objects, i.e. the locality of the
+objects in the graph, is a central conceptual benefit\footnote{The
+  converse drawback is that the lack of shared data requires
+  duplication of data when they are mutable and accessible from more
+  than one actor. The impact of this is generally reduced by having
+  smaller tokens, i.e., data objects, passing on channels. Duplication
+  of data in order to enable scalable parallelism is adopted in the
+  SDP Architecture document as one of the necessary ways of enabling
+  scalability.} of data flow computing because the exclusive access to
+the data objects by defined elements of the data flow graph introduces
+modularity. Indeed, the most common problem in multithreading legacy
+imperative programs is identifying concurrent data access.
+
+
+\subsection{An example data Flow Program}
+
+A good example is a program that reads a vector and sums up the coordinates.  The input node reads the vector, hands this vector to an actor.  The actor is fired when the vector is e.g. in memory and then the actor adds the elements and writes the output.
+
+illustration 1
+
+The above example becomes more interesting if we instead partition the vector into N chunks. Now multiple – namely N - input nodes can read the chunks in parallel, and N actors can add the chunks coordinates in parallel and a collector can gather the partial sums and write the output.  
+
+illustration 2
+
+In pseudo code, a dataflow program doing precisely this can be written as:
+\begin{lstlisting}
+master_actor (fileName, CAD)
+    fork(nodes:computeNodes, 
+         process:compute_actor, 
+         output:collectorNode, 
+         param:filename, 
+         crash:ignore) -- only get input upon fork
+    fork(nodes:collectorNode, process:collector_actor, 
+         input:computeNodes)
+    result = wait(collectorProc)
+
+compute_actor
+    fChPid = fork(nodes:local, 
+                  actor:chFileRead, 
+                  input:fileName, 
+                  input:offset) -- create channel to read the input file
+    A = wait(fChPid) -- wait for input vector on file channel
+    res = sum(A)
+    join(output, res) -- sends res message to output (the collector)
+ 
+collector_actor
+    [partialSums] = wait(input)
+    res = sum([partialSums])
+    join(res, parent) -- default case, joint a parent and exit
+\end{lstlisting}
+
+The program always starts running a master actor which. The master
+actor starts compute actors (on the computeNodes) and a single
+collector actor. Each compute actor opens a channel to read a chunk of
+the vector from a file. When it receives that chunk of the vector – a
+data object from the channel - it adds and sends the sum to its
+output, the collector, which it is told about when spawned.  The
+collector\_actor is told to expect input from the compute actors when
+it is spawned. It waits for the partial sums from the compute actors,
+adds them and sends the result back to the master.
+
+Depending on how many actors we wish to start, the dataflow graph has
+different numbers of nodes, hence the concept of dataflow graphs is
+often that of a family of graphs.  The description also lacks clarity
+regarding how the actors are created and how the program is executed,
+and this is what we turn to next.
+
+
+
+
+
+\subsection{Some title}
+
+And some text.
+
+\subsubsection{A smaller title for a little subsubsection}
+
+And a bit of text.
+
+
+\clearpage
+\section{Conclusions}
+\label{section:conclusions}
+
+And here also.
+
+
+%  Add the bibliography
+\clearpage
+\addcontentsline{toc}{section}{References}
+\bibliography{skasdp}%
+
+
+\end{document}
+
+%%% Local Variables: 
+%%% mode: latex
+%%% TeX-master: t
+%%% End: 

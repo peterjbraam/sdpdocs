@@ -1,0 +1,10 @@
+*.aux
+*.bbl
+*.blg
+*.dvi
+*.lof
+*.log
+*.lot
+/2015013-DataFlowEnvironment.pdf
+/2015013-DataFlowEnvironment.tex~
+/*.toc
