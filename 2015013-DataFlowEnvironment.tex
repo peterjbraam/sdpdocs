@@ -4,6 +4,7 @@
 \usepackage{sdp_doc} % SDP style file
 \usepackage[english]{babel} 
 \usepackage{listings}
+\usepackage{hyperref}
 
 \usepackage{amsthm}
 \usepackage{thmtools}
@@ -18,12 +19,12 @@ headpunct=\\,
 notebraces=\ \ ,
 qed=]{ExampleStyle}
 \declaretheorem[style=ExampleStyle,shaded={rulecolor=Lavender,
-rulewidth=2pt, bgcolor={rgb}{1,1,1}}]{Example}
+rulewidth=1pt, margin=10pt, bgcolor={rgb}{0.98,0.98,1}}]{Example}
 
 
 
 
-\definecolor{antiquewhite}{rgb}{0.98, 0.92, 0.84}
+\definecolor{antiquewhite}{rgb}{0.98, 0.92, 0.86}
 
 \lstset{ %
   backgroundcolor=\color{antiquewhite},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
@@ -192,40 +193,18 @@ or a library with C-like API can both be dataflow systems.  We use the
 words computing {\bf system architecture} to describe the hardware
 environment on which the dataflow programs and the runtime of the
 dataflow system can execute.  Finally, we use the words dataflow {\bf
-  environment} to describe all the components - the dataflow programs,
-the dataflow system and the computing system architecture - together
-to discuss for example the actual execution of programs on a cluster
-of computers.
+  environment} to describe all of these components - the dataflow
+programs, the dataflow system and the computing system architecture -
+together to discuss for example the actual execution of programs on a
+cluster of computers.
 
-Although in the past there have been hardware designs that
-specifically map dataflow concepts onto the computing system
-architecture, this is not envisaged for the SDP. Instead the SDP will
-embed the dataflow concepts in the upper software layers which will be
-executed on commodity hardware and on top more conventional software
-layers.
+SDP will embed the dataflow system in the upper software layers of the
+SDP system which will be executed on commodity hardware and making use
+of more conventional software layers (this is further described in
+Section~\ref{sec:sdp-syst-arch}). This is contrast to some past
+dataflow systems that combined the dataflow model with specialised
+dataflow hardware.
 
-{\bf Conceptually,} computations in dataflow programs are triggered
-not by fetching instructions sequentially but by the availability of
-input data objects.  There is a vast literature concerning systems
-with this kind of behaviour \citep[see the review
-by][]{Johnston:2004:ADP:1013208.1013209}, and there are numerous
-variations on the concepts and numerous detailed choices in these
-concepts.  First, it is important to mention that some dataflow models
-have been described and studied in mathematical detail, such as
-\cite{Hewitt:1973:UMA:1624775.1624804} actor model, while other data
-flow models are merely add-on libraries to general purpose programming
-languages.
-
-Similar variations exist in terms of typing the data that is
-exchanged: it is sometimes precisely typed and in other systems merely
-a buffer. Secondly we will just illustrate a few examples of alternate
-choices in data flow systems:
-\begin{enumerate}
-  \item When describing the availability of data
-  to trigger computation, must just one or all of multiple pieces of
-  data be available to define readiness?  
-\item Do the channels have a large or finite buffer space?
-\end{enumerate}
 This document does neither recommend detailed choices of features or
 particular choices of dataflow systems.  Instead, it is concerned with
 an explanation of the high level application of data flow techniques
@@ -236,41 +215,66 @@ should be met.
 
 \subsection{Concepts in dataflow programming}
 
-In a data flow-programming environment the execution of computation by
-\underline{actors} is triggered by the readiness of \underline{data
-  objects} on the inputs of these actors.  Data objects are the units
-of data, which are transmitted between actors through channels (which
-may transform the data). The arrival of entire object determines
-readiness: objects can be large structures such as arrays of numbers
-but the dataflow program treats them as indivisible tokens.  The fact
-that a computation is triggered does not mean it has to begin
-executing immediately upon the trigger: it could be placed in set of
-ready to execute (“fireable”) actions and executed some time later. In
-demand-driven dataflow programs the actions to execute from the
-fireable set are determined by tracing back from the desired outputs
-of the program to all intermediate actions that produce intermediate
-data products, and so it is even possible that not all triggered
-actions get executed. In data-driven dataflow programs all fireable
-actions are executed, usually using a queue system if not immediately
-upon the trigger.
+\underline{Actors} are the basic units of computation in the dataflow
+program. In very fine grained dataflow programs (e.g., GPU programs)
+they can represent individual processor instructions but in the case
+of SDP they will represent much larger units of computation, ranging
+in size from a group of routines up to a ``task'' in a radio-astronomy
+application such as CASA.  
 
+Actors explicitly specify their input and output data which are
+represented by \underline{data objects}. The data objects may be large
+data structures such as arrays of numbers, or even data with a complex
+models such as a radio astronomy Measurement Set. Data objects are the
+units of data which are passed between actors through
+\underline{channels} (which may transform the data).
 
-The structure of a data flow program therefore specifies how initial
-data is provided to the system and what happens when data flows
-through actors to a final output.
+A dataflow \underline{program} is specification of actors and how the
+input of each is connected through a channel with the outputs of other
+actors. In the case of SDP the dataflow programs will specify the
+processing of input data through to the science-ready data
+products. They replace the functionality of scripts and high-level
+routines in packages like CASA and ASKAPSoft. The SDP dataflow
+programs are further discussed in Section \ref{sec:ska-sdp-dataflow}.
 
-
-What we describe above is called the data flow graph or data
-dependency graph: the actors are the nodes of the graph and the
-channels are its edges. As we will see momentarily, although such
-graph is a precise conceptual representation of the dataflow program,
-the dataflow programs are not usually specified by explicitly
-instantiating such a graph, but rather with more conventional
-programming language mechanisms. In fact, scalable dataflow
+The specification in the dataflow program is often called the
+\underline{dataflow graph} or the data dependency graph: the actors
+are the nodes of the graph and the channels are its edges. As we will
+see momentarily, although such graph is a precise conceptual
+representation of the dataflow program, dataflow programs are not
+usually specified by explicitly instantiating such a graph, but rather
+in a more conventional programming language mechanisms. In fact,
+scalable dataflow
 \citep{Bosilca6008964,Wozniak:2012:TDD:2443416.2443421} systems never
 instantiate the full graph but traverse it symbolically and
 instantiate explicitly only a small windows around which execution is
 happening.
+
+Computations in dataflow programs are not triggered by fetching
+instructions sequentially (in fact, there is no single implicit
+sequence of instructions in a dataflow program). Instead, computation
+by the \underline{actors} is triggered by the readiness of
+\underline{data objects} on the inputs of these actors. The arrival of
+the entire object determines readiness: large objects are treated as
+indivisible tokens.  The fact that a computation is triggered does not
+mean it has to begin executing immediately upon the trigger: it could
+be placed in set of ready to execute (“fireable”) actions and executed
+some time later.
+
+In {\bf demand-driven} dataflow programs the actions to execute from
+the fireable set are determined by tracing back from the desired
+outputs of the program to all intermediate actions that produce
+intermediate data products, and so it is even possible that not all
+triggered actions get executed. In {\bf data-driven} dataflow programs
+all fireable actions are executed, usually using a queue system if not
+immediately upon the trigger. The data-driven approach is well matched
+to the objectives of the SDP since all of the data supplied to the SDP
+are expected to be incorporated into the science-ready data products.
+
+
+The structure of a dataflow program therefore specifies how initial
+data is provided to the system and what happens when data flows
+through actors to a final output.
 
 Input nodes of the graph, i.e. nodes without input channels represent
 input data for a dataflow program.  Upon program start, input nodes
@@ -282,6 +286,26 @@ times\footnote{In case of the SDP the dimensions of the input data are
   in advance of the beginning of execution of the dataflow program.}.
 
 Nodes in the graph without output channels represent results of the dataflow program.
+
+There is a vast literature concerning dataflow programs of the kind
+described above \citep[see the review
+by][]{Johnston:2004:ADP:1013208.1013209}, and there are numerous
+variations on the concepts and numerous detailed choices in these
+concepts.  Some dataflow models have been described and studied in
+mathematical detail, such as \cite{Hewitt:1973:UMA:1624775.1624804}
+actor model, while other dataflow models are merely add-on libraries
+to general purpose programming languages.
+
+Similar variations exist in terms of typing the data that is
+exchanged: it is sometimes precisely typed and in other systems merely
+a buffer. Secondly we will just illustrate a few examples of alternate
+choices in data flow systems:
+\begin{enumerate}
+  \item When describing the availability of data
+  to trigger computation, must just one or all of multiple pieces of
+  data be available to define readiness?  
+\item Do the channels have a large or finite buffer space?
+\end{enumerate}
 
 \subsection{Concurrency model}
  
@@ -303,7 +327,10 @@ concurrent data access.
 
 \begin{Example}[A simple dataflow program]
 
-A good example is a program that reads a vector and sums up the coordinates.  The input node reads the vector, hands this vector to an actor.  The actor is fired when the vector is e.g. in memory and then the actor adds the elements and writes the output.
+A good example is a program that reads a vector and sums up the
+ coordinates.  The input node reads the vector, hands this vector to
+  an actor.  The actor is fired when the vector is e.g. in memory and
+  then the actor adds the elements and writes the output.
 
 illustration 1
 
@@ -367,16 +394,25 @@ To express the instantiation of a program and its execution more
 clearly the dataflow system should be able to recognize a description
 of the available (possibly clustered) compute resources, the so called
 cluster architecture descriptor (CAD).  It must be able to create the
-actors on resources, and start their execution.  This is expressed in
+actors on resources, and start their execution.  
+
+
+\begin{Example}[Larger Graph Example]
+
+This is expressed in
 the pseudo code by modifying the master\_actor:
 
 \begin{lstlisting}
 master_actor (fileName, CAD)
 computeNodes = schedule(N-1, CAD)
    collectorNode = schedule(1, CAD)
-   fork(nodes:computeNodes, process:compute_actor, output:collectorProc, 
-   param:filename, crash:ignore) -- only get input upon fork
-   fork(nodes:collectorNode, process:collector_actor, input:computeNodes)
+   fork(nodes:computeNodes, 
+        process:compute_actor, 
+        output:collectorProc, 
+        param:filename, 
+        crash:ignore) -- only get input upon fork
+   fork(nodes:collectorNode, 
+        process:collector_actor, input:computeNodes)
    result = wait(collectorProc)
    start
 \end{lstlisting}
@@ -388,6 +424,8 @@ Secondly after setting up the actors and data dependencies (in this
 case the master\_actor simply waits for the collector) we start the
 program.  Start, schedule, join, wait and fork are examples of
 functionality provided by the dataflow system.
+
+\end{Example}
 
 We see that dataflow programs can indeed be executed in distributed
 compute environments, but can also form a good model for a program on
@@ -433,11 +471,208 @@ in this area there are some challenges, namely to conveniently
 identify the origins of the hotspots in the call stacks (as opposed to
 at the instruction address level).
 
+\subsection{Motivation for dataflow programming}
+
+Section 5 introduced data flow programs as a means to implement the
+SDP imaging.  Generally as the HPC community moves to data-driven
+exa-scale computing data flow has been advocated by many institutions
+and projects.  To note a few of the important efforts under way:
+
+\begin{enumerate}
+\item The
+  Parsec\footnote{\url{http://icl.cs.utk.edu/parsec/software/index.html} }
+  system (formerly Dague), which is used to implement the DPLASMA
+  linear algebra library
+ \item The Legion\footnote{\url{http://legion.stanford.edu/}{} } data
+   driven programming and its applications to S3D
+ \item The Swift dataflow system\footnote{\url{http://swift-lang.org/}
+   } from the University of Chicago and Argonne National Laboratory
+ \item The Parallex programming model \citep{Kaiser5364511}, e.g.,
+   HPX\footnote{\url{https://github.com/STEllAR-GROUP/hpx} }
+\end{enumerate}
+
+A different family of data flow systems has been widely used in cloud
+computing.  Among them are:
+\begin{enumerate}
+  \item Erlang (and newer variants such as Elixer and Cloud Haskell)
+  \item Apache Spark\footnote{\url{https://spark.apache.org/} }
+  \item Akka\footnote{\url{http://akka.io/} }
+\end{enumerate}
+
+Both are used for large scale solutions, but the dataflow language
+developed in the HPC community have focused on high performance and
+integration with existing HPC libraries, while the second family
+generally provides high availability features, stronger typing and
+more design patterns for data intensive computing.  Notwithstanding
+the momentum of these efforts it is important to motivate why this
+approach is more likely to meet the requirements than a differently
+structured program.  
+\begin{itemize}
+\item The model for concurrent access to data is
+explicit and deterministic, thereby clearly defining the areas where
+parallelization should be applied.  
+\item The I/O programming models for
+future HPC systems are moving in the direction of object data storage:
+the simplest and most universal interface to objects is to define
+0-copy get and put operations to fetch and replace objects in their
+entirety, which fits naturally with data flow programs (unlike for
+example mmap where data may be paged in on-demand at a later time,
+thereby stalling an actor consuming mmapped data).
+\end{itemize}
 
 
+There are several areas where the SDP design effort must continue to
+explore existing work or through development demonstrate effectiveness
+of data flow programming through further research:
+
+Optimisation across data channels and actors.  As explained we expect
+to obtain optimized kernels, for example for gridding operations for a
+variety of hardware platforms.  It is not unlikely that the efficiency
+of such kernels may be influenced by correct data placement, locality,
+and sorting, which we expect to provide through channels.  An
+effective mechanism must be found through which the kernels make such
+data layout requirements known to the data flow program and/or
+system. This issue becomes particularly tricky if e.g. subsequent
+steps in the pipeline require different optimizations.
+
+The data flow program optimization.  Across changes in hardware parameters (e.g. available memory capacity or network bandwidth) the opportunity exists to (a) change the data flow program, to mutate the algorithms and alternatively (b) to change the execution strategies of a single data flow program to be optimal for the parameters.  An example of case (a) is that with lower memory capacities faceting may be a more attractive algorithm for imaging than w-snapshots.  An example of (b) is that the generation of GCF’s (particularly when considering baseline dependent GCF’s) should likely adapt optimally without changing the data flow program that is being executed.
+
+The SDP seeks an environment offering a reasonable number of features from both the HPC family of data flow language and the cloud family.  
+
+5.1 Existing Data Flow Systems
+5.1.1 Dague/Parsec
+Static scheduling to node-level, dynamic scheduling and load-balancing within node
+Very light-weight in-process computational kernels
+No data-dependent control flow
+Completely independent control flow – no central node for coordination is required
+Symbolic traversal of the dataflow program
+H/A by task restart on the same node?
+5.1.2 Swift/T
+Fully dynamic scheduling
+Data dependent control flow
+Distributed, scalable database of currently relevant channels
+Lightweight (in-process) and heavyweight (out-of-process) tasks
+Channels implanted via a shared filesystem or via message passing
+Side effects possible
+H/A ?
+5.1.3 Legion
+
+\section{The SKA SDP Dataflow Programs}
+\label{sec:ska-sdp-dataflow}
+
+The data input to the dataflow program are the bulk data received by
+the SDP from the CSP after they have been merged with the telescope
+configuration data from the TM. The dataflow programs will handle both
+the visibility data and the data from the non-imaging processor
+section of the CSP.
 
 
+The bulk data will be of dimension known before the observation
+begins. In the imaging case the bulk data consist of the visibilities
+indexed by baseline, polarisation product, beam, etc. The dataflow
+system will not treat individual visibilities.  Instead it is expected
+the input data will be partitioned (or tiled, to borrow from
+\cite{Ragan-Kelley:2013:HLC:2499370.2462176}) into large groups of
+visibilities which will then form tokens in the dataflow system.  This
+illustrated in XXXX
 
+
+The most general dataflow program for imaging would have input data
+nodes which produce one token only and therefore have a wide tree of
+processing nodes accepting the input data. This is illustrated in
+Error: Reference source not found. In this case many nodes of the same
+type are instantiated repeatedly but this not likely to be a
+significant overhead if they are fully stateless. The reduction type
+nodes will have many arcs into them rather than a well defined
+sequence of tokens on one arc. This creates mean the dataflow graph is
+larger and somewhat more complex and that the somewhat more logic
+needs to be built-in to deal with intermediate data products which are
+of significant size.
+
+A simple alternative is the have a tiling of the input data in the
+time dimension so that multiple tokens are fired corresponding to
+multiple time slices. This is likely allow more compact
+representations of the dataflow programs throughout the system. The
+storage of intermediate data product in this arrangement is more
+explicit and more under control of the pipeline programmer rather than
+the scheduling engines (see below for definitions). It is unclear at
+the present time if it is essential for feasibility that this compact
+representation is possible.
+
+
+\subsection{Scheduling Blocks}
+
+This is the full description of the processing for an observation
+including the specification of the data input and outputs required
+from the SDP.  For each scheduling block, the data flow program will
+request scheduling, which might be adapted in the course of its
+execution. More information.
+
+\subsection{Actors}
+The processing tasks are where the vast majority of the data
+processing inside the SDP is carried out. In particular all
+non-trivial operations on bulk data like visibilities and images will
+be carried out inside the processing tasks. A processing task operates
+only on the bulk data supplied to it and it outputs results into
+buffer space supplied to it. It has no capability to communicate with
+other processing tasks and can not request or send bulk
+data. Processing tasks are referentially transparent. An example of a
+processing tasks might1 be gridding a given set of visibilities onto a
+supplied uv grid with a supplied set of convolution kernels.
+
+The implementation scheme of tasks is not yet been decided. For
+example they may be implemented either as ‘C’-API callable
+sub-routines, GPU kernels, processes, services, etc. The tasks may be
+single or multi-threaded internally but will present a single threaded
+entry point and a single-thread of control at exit.
+
+
+\section{The SDP Systems Architecture and the Dataflow System}
+\label{sec:sdp-syst-arch}
+
+In this section the mapping between the concepts present in the dataflow system and the SDP architecture, and the architecture of the main SDP sub-systems. 
+
+The SDP architecture is based on the Data Flow programming model. It seems highly advantageous that some static scheduling of the dataflow program is performed. The static scheduling will be implemented down to Data Island level which may be as small as small as a single node or more than one node up to the size of a Compute Island. The partitioning of the graph by the static scheduling assignment of sub-graphs to specific Data Islands determines the flow of the highest data volumes. For this reason this static schedule is refer to as the Physical Data Flow Graph in the SDP Architecture.
+
+The actors will be provided by the {\bf C.4.1} Processing Library and
+{\bf C.4.4} QA components of the {\bf C.4} Pipeline Components
+element. These will be referentially transparent, have nested
+parallelism (most likely many-threaded parallelism), a mechanism for
+caching, and access to constant data through the Local Telescope
+Model. The required inputs and the produced outputs will be declared
+in the interface definition of each of these components.
+
+The channels will be implemented in the {\bf C.3.1} Data Manager,
+building on top of the {\bf C.2.2} Middleware . The channels will be
+capable of buffering multiple tokens. The tokens will be implemented
+by the DataObject concept in the Data Layer.
+
+The cluster resource allocation will be done by the {\bf C.2.5}
+Scheduler subsystem in the {\bf C.2} Compute Software Platform system.
+
+The function of the static scheduling engine will be performed by the
+Data Flow Manager system in the LMC. This will compute the static part
+of the schedule and configure the data flow from the CSP to match this
+partitioning. The processing time estimator will also be implemented
+by the Data Flow Manager.
+
+The dataflow programs will be specified by the Data Flow Models
+subsystem of the LMC.  The programming environment for the programs
+and the interface declaration language for the actors will also be
+implemented by the LMC.  The dataflow program for a particular
+observing capability is referred to as the Logical Data Flow Graph to
+reflect the fact that it has not been re-organised to be optimised for
+the cluster architecture that will be used. As previously explained,
+it is likely that this will not be specified as a graph, or even ever
+instantiated in graph form in computer memory.
+
+The execution engine, the dynamic scheduling engine, and the data
+re-organisation engine will be implemented by the Data Manager
+subsystem from the Data Layer. The required capabilities of the
+dynamic scheduling engine and the data-re-organisation engine will be
+specified once the design of the compute platform is more precisely
+known and an initial analysis of data re-organisation has been
+performed.
 
 %  Add the bibliography
 \clearpage
