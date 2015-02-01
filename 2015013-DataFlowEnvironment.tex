@@ -511,9 +511,9 @@ at the instruction address level).
 
 \section{Existing dataflow systems and motivation for the dataflow model}
 
-Generally as the HPC community moves to data-driven exa-scale
-computing data flow has been advocated by many institutions and
-projects.  To note a few of the important efforts under way:
+As the HPC community moves to data-driven exa-scale computing data
+flow has been advocated by many institutions and projects.  To note a
+few of the important efforts under way:
 
 \begin{enumerate}
 \item The
@@ -528,35 +528,37 @@ projects.  To note a few of the important efforts under way:
    HPX\footnote{\url{https://github.com/STEllAR-GROUP/hpx} }
 \end{enumerate}
 
-A different family of data flow systems has been widely used in cloud
-computing.  Among them are:
+A different family of dataflow systems is already widely used in the
+cloud computing.  Among them are:
 \begin{enumerate}
-  \item Erlang (and newer variants such as Elixer and Cloud Haskell)
+\item Erlang\footnote{\url{http://www.erlang.org/} } (and newer
+  variants such as Elixer and Cloud
+  Haskell\footnote{\url{http://haskell-distributed.github.io/} })
   \item Apache Spark\footnote{\url{https://spark.apache.org/} }
   \item Akka\footnote{\url{http://akka.io/} }
 \end{enumerate}
 
-Both are used for large scale solutions, but the dataflow language
-developed in the HPC community have focused on high performance and
-integration with existing HPC libraries, while the second family
-generally provides high availability features, stronger typing and
-more design patterns for data intensive computing.  Notwithstanding
-the momentum of these efforts it is important to motivate why this
-approach is more likely to meet the requirements than a differently
-structured program.  
+Both families are used for large-scale solutions, but the dataflow
+languages developed in the HPC community have focused on high
+performance and integration with existing HPC libraries, while the
+second family focused on cloud-computing generally provides high
+availability features, stronger typing and more design patterns for
+data intensive computing.  Notwithstanding the momentum of these
+efforts it is important to motivate why this approach is more likely
+to meet the requirements than a differently structured program.
+
 \begin{itemize}
 \item The model for concurrent access to data is
 explicit and deterministic, thereby clearly defining the areas where
-parallelization should be applied.  
-\item The I/O programming models for
-future HPC systems are moving in the direction of object data storage:
-the simplest and most universal interface to objects is to define
-0-copy get and put operations to fetch and replace objects in their
-entirety, which fits naturally with data flow programs (unlike for
-example mmap where data may be paged in on-demand at a later time,
-thereby stalling an actor consuming mmapped data).
+parallelisation should be applied.  
+\item The I/O programming models for future HPC systems are moving in
+  the direction of object data storage: the simplest and most
+  universal interface to objects is to define 0-copy get and put
+  operations to fetch and replace objects in their entirety, which
+  fits naturally with data flow programs (unlike for example mmap
+  where data may be paged in on-demand at a later time, thereby
+  stalling an actor consuming mmapped data).
 \end{itemize}
-
 
 There are several areas where the SDP design effort must continue to
 explore existing work or through development demonstrate effectiveness
@@ -570,7 +572,7 @@ and sorting, which we expect to provide through channels.  An
 effective mechanism must be found through which the kernels make such
 data layout requirements known to the data flow program and/or
 system. This issue becomes particularly tricky if e.g. subsequent
-steps in the pipeline require different optimizations.
+steps in the pipeline require different optimisations.
 
 The data flow program optimization.  Across changes in hardware
 parameters (e.g. available memory capacity or network bandwidth) the
@@ -587,26 +589,27 @@ The SDP seeks an environment offering a reasonable number of features
 from both the HPC family of data flow language and the cloud family.
 
 \subsection{Comparison of  existing Dataflow Systems}
-5.1.1 Dague/Parsec
-Static scheduling to node-level, dynamic scheduling and load-balancing within node
-Very light-weight in-process computational kernels
-No data-dependent control flow
-Completely independent control flow – no central node for coordination is required
-Symbolic traversal of the dataflow program
-H/A by task restart on the same node?
-5.1.2 Swift/T
-Fully dynamic scheduling
-Data dependent control flow
-Distributed, scalable database of currently relevant channels
-Lightweight (in-process) and heavyweight (out-of-process) tasks
-Channels implanted via a shared filesystem or via message passing
-Side effects possible
-H/A ?
-5.1.3 Legion
 
-
-
-
+\begin{table}[h]
+\centering
+\begin{tabular}{|p{0.1\textwidth}|p{0.25\textwidth}|p{0.25\textwidth}|p{0.25\textwidth}|}
+ \hline
+& Parsec & Swift/T & Legion\\\hline
+Static Scheduling &
+Yes, to the level of the node &
+No, some pinning of variables to control nodes 
+&\\\hline
+Dynamic Scheduling &
+Within a node only&
+Yes, fully dynamic&\\\hline
+Data-dependent control flow &
+No & Yes & \\\hline
+Actors & Kernels (typically from BLAS) & Procedures or external processes & \\\hline
+Channels &
+Message passing on interconnect &
+Message passing on interconnect or files on a shared filesystem & \\\hline
+\end{tabular}
+\end{table}
 
 \section{The SKA SDP Dataflow Programs}
 \label{sec:ska-sdp-dataflow}
