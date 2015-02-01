@@ -185,7 +185,7 @@ conflict between the contents of the referenced documents and this document,
     \hline
     RD01 & Science Data Processor Architecture\\\hline
     RD02 & Science Data Processor Pipelines Element Design Report\\\hline
-    RD03 & COMP Element Design Report
+    RD03 & COMP Element Design Report\\\hline
   \end{tabularx}}
 \end{center}
 
@@ -287,9 +287,7 @@ to the objectives of the SDP since all of the data supplied to the SDP
 are expected to be incorporated into the science-ready data products.
 
 
-The structure of a dataflow program therefore specifies how initial
-data is provided to the system and what happens when data flows
-through actors to a final output.
+\subsection{Inputs and outputs of a dataflow program}
 
 Input nodes of the graph, i.e. nodes without input channels represent
 input data for a dataflow program.  Upon program start, input nodes
@@ -301,26 +299,6 @@ times\footnote{In case of the SDP the dimensions of the input data are
   in advance of the beginning of execution of the dataflow program.}.
 
 Nodes in the graph without output channels represent results of the dataflow program.
-
-There is a vast literature concerning dataflow programs of the kind
-described above \citep[see the review
-by][]{Johnston:2004:ADP:1013208.1013209}, and there are numerous
-variations on the concepts and numerous detailed choices in these
-concepts.  Some dataflow models have been described and studied in
-mathematical detail, such as \cite{Hewitt:1973:UMA:1624775.1624804}
-actor model, while other dataflow models are merely add-on libraries
-to general purpose programming languages.
-
-Similar variations exist in terms of typing the data that is
-exchanged: it is sometimes precisely typed and in other systems merely
-a buffer. Secondly we will just illustrate a few examples of alternate
-choices in data flow systems:
-\begin{enumerate}
-  \item When describing the availability of data
-  to trigger computation, must just one or all of multiple pieces of
-  data be available to define readiness?  
-\item Do the channels have a large or finite buffer space?
-\end{enumerate}
 
 \subsection{Concurrency model}
  
@@ -349,7 +327,11 @@ A good example is a program that reads a vector and sums up the
 
 illustration 1
 
-The above example becomes more interesting if we instead partition the vector into N chunks. Now multiple – namely N - input nodes can read the chunks in parallel, and N actors can add the chunks coordinates in parallel and a collector can gather the partial sums and write the output.  
+The above example becomes more interesting if we instead partition the
+vector into N chunks. Now multiple – namely N - input nodes can read
+the chunks in parallel, and N actors can add the chunks coordinates in
+parallel and a collector can gather the partial sums and write the
+output.
 
 illustration 2
 
@@ -406,9 +388,43 @@ and this is what we turn to next.
 \end{Example}
 
 
+\subsection{Dataflow languages}
+
+There is a vast literature concerning dataflow programs of the kind
+described above \citep[see the review
+by][]{Johnston:2004:ADP:1013208.1013209}, and there are numerous
+variations on the concepts and numerous detailed choices in these
+concepts.  Some dataflow models have been described and studied in
+mathematical detail, such as \cite{Hewitt:1973:UMA:1624775.1624804}
+actor model, while other dataflow models are merely add-on libraries
+to general purpose programming languages.
+
+Similar variations exist in terms of typing the data that is
+exchanged: it is sometimes precisely typed and in other systems merely
+a buffer. Secondly we will just illustrate a few examples of alternate
+choices in data flow systems:
+\begin{enumerate}
+  \item When describing the availability of data
+  to trigger computation, must just one or all of multiple pieces of
+  data be available to define readiness?  
+\item Do the channels have a large or finite buffer space?
+\end{enumerate}
 
 
 \section{Dataflow Systems}
+
+The Dataflow system is responsible for providing all of the non-domain
+specific logic that makes the dataflow program executable. This
+includes:
+\begin{enumerate}
+\item Deciding which actors will be run on which computing resource
+  and the sequence in which they will receive data -- this is called
+  the \underline{dataflow schedule}
+\item Implementing the channels, i.e., the passing (and possibly
+  manipulation) of data between the actors
+\item Implementing the reliability and availability mechanisms, i.e.,
+  responding to failures in the actors 
+\end{enumerate}
 
 \subsection{Scheduling, Parallelization and Availability}
 
@@ -493,12 +509,11 @@ in this area there are some challenges, namely to conveniently
 identify the origins of the hotspots in the call stacks (as opposed to
 at the instruction address level).
 
-\subsection{Motivation for dataflow programming}
+\section{Existing dataflow systems and motivation for the dataflow model}
 
-Section 5 introduced data flow programs as a means to implement the
-SDP imaging.  Generally as the HPC community moves to data-driven
-exa-scale computing data flow has been advocated by many institutions
-and projects.  To note a few of the important efforts under way:
+Generally as the HPC community moves to data-driven exa-scale
+computing data flow has been advocated by many institutions and
+projects.  To note a few of the important efforts under way:
 
 \begin{enumerate}
 \item The
@@ -588,6 +603,10 @@ Channels implanted via a shared filesystem or via message passing
 Side effects possible
 H/A ?
 5.1.3 Legion
+
+
+
+
 
 \section{The SKA SDP Dataflow Programs}
 \label{sec:ska-sdp-dataflow}
