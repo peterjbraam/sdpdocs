@@ -9,6 +9,7 @@
 \usepackage{amsthm}
 \usepackage{thmtools}
 \usepackage[dvipsnames]{xcolor}
+\usepackage{algpseudocode}
 
 \declaretheoremstyle[spaceabove=6pt, spacebelow=6pt,
 headfont=\normalfont\bfseries,
@@ -351,6 +352,13 @@ illustration 1
 The above example becomes more interesting if we instead partition the vector into N chunks. Now multiple – namely N - input nodes can read the chunks in parallel, and N actors can add the chunks coordinates in parallel and a collector can gather the partial sums and write the output.  
 
 illustration 2
+
+Conceptual pseudocode:
+\begin{algorithmic}
+  \State $a\gets \textrm{readFile "a"}$
+  \State $b\gets \textrm{readFile "b"}$
+  \State $c\gets  \textrm{+/} \quad a\times b$
+\end{algorithmic}
 
 In pseudo code, a dataflow program doing precisely this can be written as:
 \begin{lstlisting}
