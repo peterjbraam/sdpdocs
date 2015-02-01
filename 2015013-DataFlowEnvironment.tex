@@ -51,7 +51,7 @@ rulewidth=1pt, margin=10pt, bgcolor={rgb}{0.98,0.98,1}}]{Example}
 % Release
 \newcommand{\release}{1.0\xspace}
 % Date of the document release, format: Month YYYY (e.g., August 2008)
-\newcommand{\docudate}{YYYY-MM-DD\xspace}
+\newcommand{\docudate}{2015-02-09\xspace}
 % Document classification
 \newcommand{\classification}{Unrestricted}
 % Status of the document (draft/final/etc.)
@@ -61,6 +61,14 @@ rulewidth=1pt, margin=10pt, bgcolor={rgb}{0.98,0.98,1}}]{Example}
 % Table with signatures
 \newcommand{\signaturetable}{
   \begin{tabularx}{\textwidth}{|X|X|X|}
+      \hline
+      Name & Designation & Affilitation\\
+      \hline
+      B. Nikolic& Lead Author& University of Cambridge \\
+      \hline
+      Signature \& Date: & & \\
+      & & \\
+      & & \\
       \hline
       Name & Designation & Affilitation\\
       \hline
@@ -174,9 +182,11 @@ conflict between the contents of the referenced documents and this document,
     \bf{Reference} & \bf{Reference}\\
     \bf{Number} & \\
     \hline
-\end{tabularx}}
+    RD01 & Science Data Processor Architecture\\\hline
+    RD02 & Science Data Processor Pipelines Element Design Report\\\hline
+    RD03 & COMP Element Design Report
+  \end{tabularx}}
 \end{center}
-
 
 
 
@@ -227,7 +237,11 @@ represented by \underline{data objects}. The data objects may be large
 data structures such as arrays of numbers, or even data with a complex
 models such as a radio astronomy Measurement Set. Data objects are the
 units of data which are passed between actors through
-\underline{channels} (which may transform the data).
+\underline{channels} (which may transform the data). In the case of
+the SDP the channels may range from a null operation where memory
+containing the data object is simply handed over from one actor to
+another, up to complex channels which buffer data on storage devices
+or transmit it over the network.
 
 A dataflow \underline{program} is specification of actors and how the
 input of each is connected through a channel with the outputs of other
@@ -535,11 +549,21 @@ data layout requirements known to the data flow program and/or
 system. This issue becomes particularly tricky if e.g. subsequent
 steps in the pipeline require different optimizations.
 
-The data flow program optimization.  Across changes in hardware parameters (e.g. available memory capacity or network bandwidth) the opportunity exists to (a) change the data flow program, to mutate the algorithms and alternatively (b) to change the execution strategies of a single data flow program to be optimal for the parameters.  An example of case (a) is that with lower memory capacities faceting may be a more attractive algorithm for imaging than w-snapshots.  An example of (b) is that the generation of GCF’s (particularly when considering baseline dependent GCF’s) should likely adapt optimally without changing the data flow program that is being executed.
+The data flow program optimization.  Across changes in hardware
+parameters (e.g. available memory capacity or network bandwidth) the
+opportunity exists to (a) change the data flow program, to mutate the
+algorithms and alternatively (b) to change the execution strategies of
+a single data flow program to be optimal for the parameters.  An
+example of case (a) is that with lower memory capacities faceting may
+be a more attractive algorithm for imaging than w-snapshots.  An
+example of (b) is that the generation of GCF’s (particularly when
+considering baseline dependent GCF’s) should likely adapt optimally
+without changing the data flow program that is being executed.
 
-The SDP seeks an environment offering a reasonable number of features from both the HPC family of data flow language and the cloud family.  
+The SDP seeks an environment offering a reasonable number of features
+from both the HPC family of data flow language and the cloud family.
 
-5.1 Existing Data Flow Systems
+\subsection{Comparison of  existing Dataflow Systems}
 5.1.1 Dague/Parsec
 Static scheduling to node-level, dynamic scheduling and load-balancing within node
 Very light-weight in-process computational kernels
@@ -564,61 +588,89 @@ The data input to the dataflow program are the bulk data received by
 the SDP from the CSP after they have been merged with the telescope
 configuration data from the TM. The dataflow programs will handle both
 the visibility data and the data from the non-imaging processor
-section of the CSP.
+section of the CSP. An illustration of a simplified dataflow program
+handling continuum imaging is shown in Figure~\ref{fig:contdataflow}.
 
 
-The bulk data will be of dimension known before the observation
-begins. In the imaging case the bulk data consist of the visibilities
-indexed by baseline, polarisation product, beam, etc. The dataflow
-system will not treat individual visibilities.  Instead it is expected
-the input data will be partitioned (or tiled, to borrow from
-\cite{Ragan-Kelley:2013:HLC:2499370.2462176}) into large groups of
-visibilities which will then form tokens in the dataflow system.  This
-illustrated in XXXX
+\begin{figure}
+  \includegraphics[width=\textwidth,trim=0 4cm 0 0]{figs/dataflow/ContinuumImagingPipeline-Overview}
+  \caption{Illustration of a possible dataflow program for the
+    Continuum Imaging pipeline for the SDP (calibration is not
+    shown). The green rectangles are the basic computations in this
+    description, i.e., the actors. Arrows represent the data
+    dependencies between the actors.  See [RD02] for further
+    discussion.}
+  \label{fig:contdataflow}
+\end{figure}
 
-
-The most general dataflow program for imaging would have input data
-nodes which produce one token only and therefore have a wide tree of
-processing nodes accepting the input data. This is illustrated in
-Error: Reference source not found. In this case many nodes of the same
-type are instantiated repeatedly but this not likely to be a
-significant overhead if they are fully stateless. The reduction type
-nodes will have many arcs into them rather than a well defined
-sequence of tokens on one arc. This creates mean the dataflow graph is
-larger and somewhat more complex and that the somewhat more logic
-needs to be built-in to deal with intermediate data products which are
-of significant size.
-
-A simple alternative is the have a tiling of the input data in the
-time dimension so that multiple tokens are fired corresponding to
-multiple time slices. This is likely allow more compact
-representations of the dataflow programs throughout the system. The
-storage of intermediate data product in this arrangement is more
-explicit and more under control of the pipeline programmer rather than
-the scheduling engines (see below for definitions). It is unclear at
-the present time if it is essential for feasibility that this compact
-representation is possible.
 
 
 \subsection{Scheduling Blocks}
 
 This is the full description of the processing for an observation
 including the specification of the data input and outputs required
-from the SDP.  For each scheduling block, the data flow program will
-request scheduling, which might be adapted in the course of its
-execution. More information.
+from the SDP. The details of the scheduling block will be used to
+select and instantiate a dataflow program for processing of the data
+during this observation.
+
+A single dataflow program will describe \underline{all} of the
+processing of data taken with single scheduling block. This is because
+the same input data are used in multiple functions of the SDP (e.g.,
+they may be used for real-time calibration, fast imaging, continuum
+imaging and spectral imaging) and because multiple copies of the whole
+input data into SDP may be very expensive. The best way of avoiding
+copies and movement of data is that they are handled in a single
+program.
+
+\subsection{Granularity of the SDP program}
+
+The diagram in Figure~\ref{fig:contdataflow} shows the possible
+splitting of data that is suitable for the described algorithm.  The
+splitting is done in multiple dimensions (i.e., beam, frequency, time,
+facet in the above example). The granularity of the splits is an {\bf
+  adjustable parameter} where:
+\begin{description}
+\item[upper limit] is determined by the nature of the observed data
+  and algorithm: e.g., the maximum split in frequency is into the
+  256000 channels
+\item[lower limit] is determined by the {\bf required parallelism} to
+  carry out the processing in the available time
+\end{description} 
+
+In addition to the splitting are design decisions on the granularity
+of the actors used, i.e., whether they present a large sequence of
+operations or individual only small routines. 
+
+Together these decisions decide the granularity of the whole SDP
+program. They will be decided by balancing following criteria:
+\begin{enumerate}
+\item The minimum granularity is set by the necessity to achieve the
+  minimum parallelisation for the program as a whole given the
+  constraints on storing the visibility data
+\item Finer granularity allows for better load-balancing, potentially
+  less working memory requirements, and reduces the impact of any
+  failures to a smaller part of the data
+\item Coarser granularity reduces message rates, reducing the
+  requirement for low-latency on the interconnect
+\item Coarser granularity reduces the number of actors active at any
+  time, and reduces the rate at which new actors need to be fired, all
+  of which should reduce overheads
+\end{enumerate}
 
 \subsection{Actors}
-The processing tasks are where the vast majority of the data
-processing inside the SDP is carried out. In particular all
-non-trivial operations on bulk data like visibilities and images will
-be carried out inside the processing tasks. A processing task operates
-only on the bulk data supplied to it and it outputs results into
-buffer space supplied to it. It has no capability to communicate with
-other processing tasks and can not request or send bulk
-data. Processing tasks are referentially transparent. An example of a
-processing tasks might1 be gridding a given set of visibilities onto a
-supplied uv grid with a supplied set of convolution kernels.
+Actors are the processing tasks which are the individual units of
+data-processing in SDP. In particular all non-trivial operations on
+bulk data like visibilities and images will be carried out inside the
+actors. In the example shown in Figure~\ref{fig:contdataflow} data
+processing tasks like gridding, FFTs, image-plane corrections are the
+actors.
+
+A processing task operates only on the bulk data supplied to it and it
+outputs results into buffer space supplied to it. It has no capability
+to communicate with other processing tasks and can not request or send
+bulk data. Processing tasks are referentially transparent. An example
+of a processing tasks might be gridding a given set of visibilities
+onto a supplied uv grid with a supplied set of convolution kernels.
 
 The implementation scheme of tasks is not yet been decided. For
 example they may be implemented either as ‘C’-API callable
@@ -626,35 +678,49 @@ sub-routines, GPU kernels, processes, services, etc. The tasks may be
 single or multi-threaded internally but will present a single threaded
 entry point and a single-thread of control at exit.
 
-
 \section{The SDP Systems Architecture and the Dataflow System}
 \label{sec:sdp-syst-arch}
 
-In this section the mapping between the concepts present in the dataflow system and the SDP architecture, and the architecture of the main SDP sub-systems. 
+In this section we show the initial mapping between dataflow concepts,
+the SDP architecture, and the architecture of the primary SDP
+sub-systems. The dataflow aspects of the SDP system is, like the
+remainder of the system, at a preliminary design stage and therefore
+detailed implementation decisions have not yet been made.
 
-The SDP architecture is based on the Data Flow programming model. It seems highly advantageous that some static scheduling of the dataflow program is performed. The static scheduling will be implemented down to Data Island level which may be as small as small as a single node or more than one node up to the size of a Compute Island. The partitioning of the graph by the static scheduling assignment of sub-graphs to specific Data Islands determines the flow of the highest data volumes. For this reason this static schedule is refer to as the Physical Data Flow Graph in the SDP Architecture.
+The SDP architecture adopts the dataflow programming model for the
+specification of all of its primary data processing functions. 
 
-The actors will be provided by the {\bf C.4.1} Processing Library and
-{\bf C.4.4} QA components of the {\bf C.4} Pipeline Components
-element. These will be referentially transparent, have nested
-parallelism (most likely many-threaded parallelism), a mechanism for
-caching, and access to constant data through the Local Telescope
-Model. The required inputs and the produced outputs will be declared
-in the interface definition of each of these components.
+The use of the concept of Compute Islands (see [RD03] for details)
+with have very high-bandwidth communication intra-island and less so
+inter-island strongly suggests that the dataflow program should be at
+least partially {\bf statically scheduled}.  The static schedule will
+partition the dataflow graph to Data Island level which may be as
+small as small as a single compute node, or it may be composed of more
+than one compute node up to the size of the compute island. This
+partitioning of the graph ensure that the earliest processing stages
+minimise the movement of the data between islands.
 
-The channels will be implemented in the {\bf C.3.1} Data Manager,
-building on top of the {\bf C.2.2} Middleware . The channels will be
-capable of buffering multiple tokens. The tokens will be implemented
-by the DataObject concept in the Data Layer.
+The \underline{actors} will be provided by the {\bf C.4.1} Processing
+Library and {\bf C.4.4} QA components of the {\bf C.4} Pipeline
+Components element. These will be referentially transparent, have
+nested parallelism (most likely many-threaded parallelism), a
+mechanism for caching, and access to constant data through the Local
+Telescope Model. The required inputs and the produced outputs will be
+declared in the interface definition of each of these components.
+
+The \underline{channels} will be implemented in the {\bf C.3.1} Data
+Manager, building on top of the {\bf C.2.2} Middleware . The channels
+will be capable of buffering multiple tokens.  The tokens will be
+implemented by the DataObject concept in the Data Layer.
 
 The cluster resource allocation will be done by the {\bf C.2.5}
 Scheduler subsystem in the {\bf C.2} Compute Software Platform system.
 
-The function of the static scheduling engine will be performed by the
-Data Flow Manager system in the LMC. This will compute the static part
-of the schedule and configure the data flow from the CSP to match this
-partitioning. The processing time estimator will also be implemented
-by the Data Flow Manager.
+The initial \underline{static schedule} for the dataflow program will
+be performed by the Data Flow Manager system in the LMC. This will
+compute the static part of the schedule and configure the data flow
+from the CSP to match this partitioning. The processing time estimator
+will also be implemented by the Data Flow Manager.
 
 The dataflow programs will be specified by the Data Flow Models
 subsystem of the LMC.  The programming environment for the programs
