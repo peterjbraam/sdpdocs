@@ -322,54 +322,42 @@ identifying concurrent data access.
 
 \begin{Example}[A simple dataflow program]
 
-A good example is a program that reads a vector and sums up the
- coordinates.  The input node reads the vector, hands this vector to
-  an actor.  The actor is fired when the vector is e.g. in memory and
-  then the actor adds the elements and writes the output.
-
-illustration 1
-
-The above example becomes more interesting if we instead partition the
-vector into N chunks. Now multiple – namely N - input nodes can read
-the chunks in parallel, and N actors can add the chunks coordinates in
-parallel and a collector can gather the partial sums and write the
-output.
-
-illustration 2
-
-Conceptual pseudocode:
+  A simple example is a program that reads two vector and computes the
+  sum product of them, i.e., at high level:
 \begin{algorithmic}
-  \State $a\gets \textrm{readFile "a"}$
-  \State $b\gets \textrm{readFile "b"}$
-  \State $c\gets  \textrm{+/} \quad a\times b$
-\end{algorithmic}
-
-In pseudo code, a dataflow program doing precisely this can be written as:
+  \State $a\gets \textrm{readFile "a"}$;  $b\gets \textrm{readFile "b"}$ ; $c\gets  \textrm{+/} \quad a\times b$
+\end{algorithmic}  
+In the example below the input node reads two vectors and hands this
+vector to an actor.  The actor is fired when the vector is e.g. in
+memory and then the actor adds the elements and writes the output. The
+example becomes interesting when the input vectors are split into N
+chunks, allowing N multiple nodes to read the channel in parallel.  In
+pseudo code, a dataflow program doing precisely this can be written
+as:
 \begin{lstlisting}
 master_actor(input:fileName1, 
              input:fileName2, 
              input:clusterArchitecture) - schedules the work and starts it
+     ch1, ch2 = open(param:fileName1, N), oepn(param:fileName2, N)
      fork(resource:computeNode, 
           actor:computeActor, 
+          channel: ch1, channel: ch2,
           output:collectorProc,
-          param:fileName1, 
-          param:fileName2, 
           crash:ignore) -- get input upon fork
      fork(collectorNode, process:collectorActor, input:computeNodes, crash:fail)
      startDataFlow
      result = wait(collectorNode)
 
-
 computeActor
-     fileChannel1=fork(nodes:local, 
-                       actor:chFileRead, 
-                       input:fileName1,
-                       input:offset)
-     fileChannel2=fork(nodes:local, 
-                       actor:chFileRead, 
-                       input:fileName2,
-                       input:offset)
-    (A1, A2)=wait(fileChannel1, fileChannel2);
+     in1=fork(nodes:local, 
+              actor:chFileRead, 
+              input:ch1,
+              input:offset)
+     in2=fork(nodes:local, 
+              actor:chFileRead, 
+              input:ch2,
+              input:offset)
+    (A1, A2)=wait(in1, in2);
     res=dotProductLocal(A1, A2)
     join(output, res)  -- sends res message to the collector, notifies
                        -- parent of clean exit
@@ -425,7 +413,8 @@ choices in data flow systems:
 
 \section{Dataflow Systems}
 \label{sec:dataflow-systems}
-The Dataflow system is responsible for providing all of the non-domain
+
+The dataflow system is responsible for providing all of the non-domain
 specific logic that makes the dataflow program executable. This
 includes:
 \begin{enumerate}
@@ -438,31 +427,45 @@ includes:
   responding to failures in the actors 
 \end{enumerate}
 
-\subsection{Scheduling, Parallelization and Availability}
+\subsection{Scheduling, Parallelisation and Availability}
 
-To express the instantiation of a program and its execution more
-clearly the dataflow system should be able to recognize a description
-of the available (possibly clustered) compute resources, the so called
-cluster architecture descriptor (CAD).  It must be able to create the
-actors on resources, and start their execution.  
+Scheduling is concerned with assigning actors to individual computing
+resources, re-assigning them if there is a failure of the resource or
+excessive contention for the resource, and determining the order of
+execution within a compute resource. Scheduling is intricately linked
+with parallelisation, since a schedule can be optimised to make use of
+maximum parallelisation to decrease the time to result. A scheduled
+can also be optimised with respect to other objectives, e.g., power
+consumption in which case parallelisation may be reduced to reduce the
+power use associated with movement of data. 
 
+The schedule is also linked with availability because it deals with
+restart of actors that have failed and potentially also with
+duplicating some key parts of work.
 
-\begin{Example}[Larger Graph Example]
+In order for the scheduling to work and to manage the instantiation of
+a program and its execution, the dataflow system must be able to
+recognise a description of the available (possibly clustered) compute
+resources, the so called cluster architecture descriptor (CAD).  The
+dataflow system must have the functions to create the actors on
+resources, and start their execution.
 
-This is expressed in
-the pseudo code by modifying the master\_actor:
+\begin{Example}[A dataflow program with explicit scheduling step]
+
+This is expressed in the pseudo code by modifying the {\tt master\_actor}:
 
 \begin{lstlisting}
 master_actor(input:fileName1, 
              input:fileName2, 
              input:clusterArchitecture) - schedules the work and starts it
      N = numberOfProcessors(clusterArchitecture)
+     ch1, ch2 = open(param:fileName1, N), oepn(param:fileName2, N)
      computeNodes = schedule(N-1, clusterArchitecture)
      collectorNode = schedule(1, clusterArchitecture)
      fork(resource:computeNode, 
           actor:computeActor, 
           output:collectorProc,
-          param:fileName1, param:fileName2, crash:ignore) -- get input upon fork
+          param:ch1, param:ch2, crash:ignore) -- get input upon fork
      fork(collectorNode, process:collectorActor, input:computeNodes, crash:fail)
      startDataFlow
      result = wait(collectorNode)
@@ -489,38 +492,72 @@ scheduling.  A few further elaborations can be made.
 
 \subsection{Optimisation and separation of functionality and scheduling}
 
-First a refined scheduler may use a model to predict performance and attempt to optimize scheduling using the CAD: for example it might find GPU’s are available and if the option exists in the program use GPU actors to accelerate the additions further.    
+A fundamental important feature is that the functionality is contained
+in the description of the actors and their dependencies on data from
+the channels.  Provided that this description contains some
+parameters, such as offering the chunking into sub vectors on a
+variable number of nodes in our example, the scheduling can be used to
+optimize the execution within this parameter space without changing
+the functionality of the program.  The schedule can be independently
+modified from the functionality without risk to the correctness of the
+program.
 
-A fundamental important feature is that the functionality is contained in the description of the actors and their dependencies on data from the channels.  Provided that this description contains some parameters, such as offering the chunking into sub vectors on a variable number of nodes in our example, the scheduling can be used to optimize the execution within this parameter space without changing the functionality of the program.  The schedule can be independently modified from the functionality without risk to the correctness of the program.
+It may also dynamically schedule the dataflow and allow the program to
+process initial data, and later adapt the distribution of new data
+objects to observed performance.  Dynamic scheduling could also allow
+the creation of less or more actors to optimize performance as the
+execution proceeds.
 
-It may also dynamically schedule the dataflow and allow the program to process initial data, and later adapt the distribution of new data objects to observed performance.  Dynamic scheduling could also allow the creation of less or more actors to optimize performance as the execution proceeds. 
+Second if failures happen, the data flow program may indicate (using
+features of a suitable dataflow system) what should be done.  In our
+current example we have at least two obvious options if a single actor
+were to crash: one is to ignore it (aka the fail-out model) and inform
+the collector to simply gather the sums that do arrive and ignore the
+absence of the sum from the crashed actor.  The second choice would be
+to inform the master that that the entire program should be aborted.
 
-Second if failures happen, the data flow program may indicate (using features of a suitable dataflow system) what should be done.   In our current example we have at least two obvious options if a single actor were to crash: one is to ignore it (aka the fail-out model) and inform the collector to simply gather the sums that do arrive and ignore the absence of the sum from the crashed actor.  The second choice would be to inform the master that that the entire program should be aborted.
+A refined scheduler may use a model to predict performance and attempt
+to optimize scheduling using the CAD: for example it might find GPU’s
+are available and if the option exists in the program use GPU actors
+to accelerate the additions further.
+
 
 \subsection{The implementation of Kernels, Dataflow and Domain Specific Languages}
 
-While many dataflow systems are closely tied to a particular programming language, it is our aim to write dataflow programs that can incorporate finely tuned kernels as parts of actors or channels.  Such kernels may perform specific numerical functions such as Fourier transforms, or refined I/O. The kernels may be best written in a language optimal for that purpose: e.g. Cuda for using a GPU or C++ for an SMP system, or C for a carefully tuned I/O channel. 
-The organization of the data flow program at a high level is probably more efficiently done in a higher level language.
-What emerges is a program written in a language that utilizes:
-(A) pre-existing data flow primitives from the dataflow system, including those for scheduling
-(B) interfaces to the kernels required for the specific SKA SDP application.
-Hence the data flow programs are written in a domain specific language (DSL) offering A and B. 
+While many dataflow systems are closely tied to a particular
+programming language, the aim of the SDP is write dataflow programs
+that can incorporate finely tuned kernels as parts of actors or
+channels.  Such kernels may perform specific numerical functions such
+as Fourier transforms, or refined I/O. The kernels may be best written
+in a language optimal for that purpose: e.g., CUDA when using a GPU or
+MPI/OpenMP C++ program for an SMP system, or C for a carefully tuned
+I/O channel.
+
+On the other hand, the top-level program description and the
+description of the data dependencies is probably more efficiently done
+in a higher level language. What emerges is a program written in a
+language that utilises:
+
+\begin{enumerate}
+  \item Pre-existing data flow primitives from the dataflow system,
+    including those for scheduling
+  \item Interfaces to the optimised kernels specific SKA to the SDP
+    application
+\end{enumerate}
+The dataflow program may be expressed as a Domain Specific Language
+offering both of the above. Alternatively these can be expressed
+through the execution of a more general purpose language which calls
+on appropriate libraries.
 
 \subsection{Distributed profiling and debugging of data flow programs}
 
 The data object transfer times and the actor execution times are
 natural performance metrics of a data flow program that are useful to
-monitor and to use for optimal scheduling.  There is naturally a small
-overhead in the invocation of actors and in the transfer of data
-objects, and precisely when this overhead becomes significant is an
-indication that the data flow should be re-organized to use larger
-objects, for which the overheads are negligible.  Other issues, such
-as frequent cache misses or hotspots can be found using the profiling
-of general software programs.  While operating system supported
-infrastructure such as the performance counters aid this enormously,
-in this area there are some challenges, namely to conveniently
-identify the origins of the hotspots in the call stacks (as opposed to
-at the instruction address level).
+monitor and to use later for optimal scheduling of similar programs.
+There is naturally a small overhead in the invocation of actors and in
+the transfer of data objects, and precisely when this overhead becomes
+significant is an indication that the data flow should be re-organized
+to use larger objects, for which the overheads are negligible.  
 
 \section{Existing dataflow systems and motivation for the dataflow model}
 \label{sec:exist-datafl-syst}
@@ -611,18 +648,21 @@ from both the HPC family of data flow language and the cloud family.
 & Parsec & Swift/T & Legion\\\hline
 Static Scheduling &
 Yes, to the level of the node &
-No, some pinning of variables to control nodes 
-&\\\hline
+No, some pinning of variables to control nodes  &
+Yes, via partitions
+\\\hline
 Dynamic Scheduling &
 Within a node only&
-Yes, fully dynamic&\\\hline
+Yes, fully dynamic&
+Yes, in the runtime system\\\hline
 Data-dependent control flow &
-No & Yes & \\\hline
-Actors & Kernels (typically from BLAS) & Procedures or external processes & \\\hline
+No & Yes & Yes \\\hline
+Actors & Kernels (typically from BLAS) & Kernels, complex procedures or external processes & Procedures \\\hline
 Channels &
 Message passing on interconnect &
-Message passing on interconnect or files on a shared filesystem & \\\hline
+Message passing on interconnect or files on a shared filesystem & Message passing \\\hline
 \end{tabular}
+\caption{Comparison of the features of Parsec, SWIFT/T and Legion dataflow languages}.
 \end{table}
 
 \section{The SKA SDP Dataflow Programs}
