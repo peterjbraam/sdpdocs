@@ -770,7 +770,9 @@ partition the dataflow graph to Data Island level which may be as
 small as small as a single compute node, or it may be composed of more
 than one compute node up to the size of the compute island. This
 partitioning of the graph ensure that the earliest processing stages
-minimise the movement of the data between islands.
+minimise the movement of the data between islands. A possible
+execution concept is illustrated in
+Figure~\ref{fig:dataislandexecmodel}.
 
 \begin{figure}
   \begin{centering}
