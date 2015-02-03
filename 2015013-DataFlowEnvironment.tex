@@ -344,29 +344,39 @@ Conceptual pseudocode:
 
 In pseudo code, a dataflow program doing precisely this can be written as:
 \begin{lstlisting}
-master_actor (fileName, CAD)
-    fork(nodes:computeNodes, 
-         process:compute_actor, 
-         output:collectorNode, 
-         param:filename, 
-         crash:ignore) -- only get input upon fork
-    fork(nodes:collectorNode, process:collector_actor, 
-         input:computeNodes)
-    result = wait(collectorProc)
+master_actor(input:fileName1, 
+             input:fileName2, 
+             input:clusterArchitecture) - schedules the work and starts it
+     fork(resource:computeNode, 
+          actor:computeActor, 
+          output:collectorProc,
+          param:fileName1, 
+          param:fileName2, 
+          crash:ignore) -- get input upon fork
+     fork(collectorNode, process:collectorActor, input:computeNodes, crash:fail)
+     startDataFlow
+     result = wait(collectorNode)
 
-compute_actor
-    fChPid = fork(nodes:local, 
-                  actor:chFileRead, 
-                  input:fileName, 
-                  input:offset) -- create channel to read the input file
-    A = wait(fChPid) -- wait for input vector on file channel
-    res = sum(A)
-    join(output, res) -- sends res message to output (the collector)
- 
-collector_actor
-    [partialSums] = wait(input)
-    res = sum([partialSums])
-    join(res, parent) -- default case, joint a parent and exit
+
+computeActor
+     fileChannel1=fork(nodes:local, 
+                       actor:chFileRead, 
+                       input:fileName1,
+                       input:offset)
+     fileChannel2=fork(nodes:local, 
+                       actor:chFileRead, 
+                       input:fileName2,
+                       input:offset)
+    (A1, A2)=wait(fileChannel1, fileChannel2);
+    res=dotProductLocal(A1, A2)
+    join(output, res)  -- sends res message to the collector, notifies
+                       -- parent of clean exit
+
+collectorActor
+    [partialDP ] = wait(input)
+    res = sum([partialDP])
+    join(res, parent) -- default case, join a parent and exit
+
 \end{lstlisting}
 
 The program always starts running a master actor which. The master
@@ -441,18 +451,19 @@ This is expressed in
 the pseudo code by modifying the master\_actor:
 
 \begin{lstlisting}
-master_actor (fileName, CAD)
-computeNodes = schedule(N-1, CAD)
-   collectorNode = schedule(1, CAD)
-   fork(nodes:computeNodes, 
-        process:compute_actor, 
-        output:collectorProc, 
-        param:filename, 
-        crash:ignore) -- only get input upon fork
-   fork(nodes:collectorNode, 
-        process:collector_actor, input:computeNodes)
-   result = wait(collectorProc)
-   start
+master_actor(input:fileName1, 
+             input:fileName2, 
+             input:clusterArchitecture) - schedules the work and starts it
+     N = numberOfProcessors(clusterArchitecture)
+     computeNodes = schedule(N-1, clusterArchitecture)
+     collectorNode = schedule(1, clusterArchitecture)
+     fork(resource:computeNode, 
+          actor:computeActor, 
+          output:collectorProc,
+          param:fileName1, param:fileName2, crash:ignore) -- get input upon fork
+     fork(collectorNode, process:collectorActor, input:computeNodes, crash:fail)
+     startDataFlow
+     result = wait(collectorNode)
 \end{lstlisting}
 
 We see that the modifications are twofold: we schedule the N-1
