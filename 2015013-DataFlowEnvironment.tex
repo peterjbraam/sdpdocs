@@ -4,7 +4,7 @@
 \usepackage{sdp_doc} % SDP style file
 \usepackage[english]{babel} 
 \usepackage{listings}
-\usepackage{hyperref}
+\usepackage[pdfborderstyle={/S/U/W 1}]{hyperref}
 
 \usepackage{amsthm}
 \usepackage{thmtools}
@@ -144,16 +144,18 @@ rulewidth=1pt, margin=10pt, bgcolor={rgb}{0.98,0.98,1}}]{Example}
 
 The purpose of this document is to familiarise the reader with the
 dataflow programming model and describe why this model is likely to
-satisfy the requirements of the Science Data Processor. We then
-describe concepts that accompany a data flow system, and the
-relationship between the SDP systems architecture and the data flow
-system.  Coverage of these four topics makes up the central sections
-of this document.  A glossary at the end of this defines terminology.
-The remainder of the introduction tries to describe at what level of
-detail the current exposition proceeds.
+satisfy the requirements of the Science Data Processor.  We first
+describe concepts of the dataflow programming model
+(Section~\ref{sec:dataflow-programs}) and dataflow systems which are
+software environments executing dataflow programs
+(Section~\ref{sec:dataflow-systems}). We then present an initial
+review of some existing relevant dataflow systems
+(Section~\ref{sec:exist-datafl-syst}). The final two sections describe
+in more detail the SDP dataflow programs
+(Section~\ref{sec:ska-sdp-dataflow}) and the mapping between the
+dataflow concepts and the SDP Architecture
+(Section~\ref{sec:sdp-syst-arch}).
 
-% Add to the table the list of applicable and reference documents
-% (this is NOT meant for your usual bibiliography, only for SKA docs)
 \sdpreferencedocs
 
 \subsection*{Applicable Documents}
@@ -223,7 +225,7 @@ to SDP imaging, and requirements for dataflow systems that must or
 should be met.
 
 \section{Dataflow Programs}
-
+\label{sec:dataflow-programs}
 \subsection{Concepts in dataflow programming}
 
 \underline{Actors} are the basic units of computation in the dataflow
@@ -422,7 +424,7 @@ choices in data flow systems:
 
 
 \section{Dataflow Systems}
-
+\label{sec:dataflow-systems}
 The Dataflow system is responsible for providing all of the non-domain
 specific logic that makes the dataflow program executable. This
 includes:
@@ -521,6 +523,7 @@ identify the origins of the hotspots in the call stacks (as opposed to
 at the instruction address level).
 
 \section{Existing dataflow systems and motivation for the dataflow model}
+\label{sec:exist-datafl-syst}
 
 As the HPC community moves to data-driven exa-scale computing data
 flow has been advocated by many institutions and projects.  To note a
