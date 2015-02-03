@@ -118,23 +118,6 @@ rulewidth=1pt, margin=10pt, bgcolor={rgb}{0.98,0.98,1}}]{Example}
 
 \sdptableofcontents
 
-% Add here the abbreviations used in your document
-\sdplistofabbreviations
-\begin{basedescript}{\desclabelstyle{\pushlabel}\desclabelwidth{6em}}
-    \item[SOMETHING] Something \vspace{-0.2cm}
-    \item[OTHER] Other something \vspace{-0.2cm}
-    \item[OTHER] Other other something \vspace{-0.2cm}
-\end{basedescript} 
-
-% Add here the symbols used in your document
-\sdplistofsymbols
-\begin{basedescript}{\desclabelstyle{\pushlabel}\desclabelwidth{6em}}
-    \item[$N_\mathrm{something}$] Number of somethings \vspace{-0.2cm}
-    \item[OTHER] Other something \vspace{-0.2cm}
-    \item[OTHER] Other other something \vspace{-0.2cm}
-\end{basedescript} 
-
-
 \sdplistoffigures
 
 \sdplistoftables
@@ -784,8 +767,8 @@ than one compute node up to the size of the compute island. This
 partitioning of the graph ensure that the earliest processing stages
 minimise the movement of the data between islands.
 
-The \underline{actors} will be provided by the {\bf C.4.1} Processing
-Library and {\bf C.4.4} QA components of the {\bf C.4} Pipeline
+The \underline{actors} will be provided by the {\bf C.4.1 Processing
+  Library} and {\bf C.4.4 QA components} of the C.4 Pipeline
 Components element. These will be referentially transparent, have
 nested parallelism (most likely many-threaded parallelism), a
 mechanism for caching, and access to constant data through the Local
@@ -795,21 +778,21 @@ declared in the interface definition of each of these components.
 The \underline{channels} will be implemented in the {\bf C.3.1} Data
 Manager, building on top of the {\bf C.2.2} Middleware . The channels
 will be capable of buffering multiple tokens.  The tokens will be
-implemented by the DataObject concept in the Data Layer.
+implemented by the DataObject concept in the {\bf C.3 Data Layer}.
 
 The cluster resource allocation will be done by the {\bf C.2.5}
 Scheduler subsystem in the {\bf C.2} Compute Software Platform system.
 
 The initial \underline{static schedule} for the dataflow program will
-be performed by the Data Flow Manager system in the LMC. This will
-compute the static part of the schedule and configure the data flow
-from the CSP to match this partitioning. The processing time estimator
-will also be implemented by the Data Flow Manager.
+be performed by the {\bf C.6.2 Data Flow Manager} system in the
+LMC. This will compute the static part of the schedule and configure
+the data flow from the CSP to match this partitioning. The processing
+time estimator will also be implemented by the Data Flow Manager.
 
-The dataflow programs will be specified by the Data Flow Models
-subsystem of the LMC.  The programming environment for the programs
-and the interface declaration language for the actors will also be
-implemented by the LMC.  The dataflow program for a particular
+The dataflow programs will be specified by the {\bf C.6.7 Data Flow
+  Models} subsystem of the LMC.  The programming environment for the
+programs and the interface declaration language for the actors will
+also be implemented by the LMC.  The dataflow program for a particular
 observing capability is referred to as the Logical Data Flow Graph to
 reflect the fact that it has not been re-organised to be optimised for
 the cluster architecture that will be used. As previously explained,
@@ -817,10 +800,10 @@ it is likely that this will not be specified as a graph, or even ever
 instantiated in graph form in computer memory.
 
 The execution engine, the dynamic scheduling engine, and the data
-re-organisation engine will be implemented by the Data Manager
-subsystem from the Data Layer. The required capabilities of the
-dynamic scheduling engine and the data-re-organisation engine will be
-specified once the design of the compute platform is more precisely
+re-organisation engine will be implemented by the {\bf C.3.1 Data
+  Manager} subsystem from the Data Layer. The required capabilities of
+the dynamic scheduling engine and the data-re-organisation engine will
+be specified once the design of the compute platform is more precisely
 known and an initial analysis of data re-organisation has been
 performed.
 
