@@ -308,7 +308,7 @@ identifying concurrent data access.
   A simple example is a program that reads two vector and computes the
   sum product of them, i.e., at high level:
 \begin{algorithmic}
-  \State $a\gets \textrm{readFile "a"}$;  $b\gets \textrm{readFile "b"}$ ; $c\gets  \textrm{+/} \quad a\times b$
+  \State $a\gets \textrm{readFile "fileA"}$;  $b\gets \textrm{readFile "fileB"}$ ; $c\gets  \textrm{+/} \quad a\times b$
 \end{algorithmic}  
 In the example below the input node reads two vectors and hands this
 vector to an actor.  The actor is fired when the vector is e.g. in
@@ -624,6 +624,10 @@ from both the HPC family of data flow language and the cloud family.
 
 \subsection{Comparison of  existing Dataflow Systems}
 
+An initial comparison of three relevant dataflow systems (Parsec,
+SWIFT/T and Legion) is presented in
+Table\ref{tab:dataflowcomparision}.
+
 \begin{table}[h]
 \centering
 \begin{tabular}{|p{0.1\textwidth}|p{0.25\textwidth}|p{0.25\textwidth}|p{0.25\textwidth}|}
@@ -646,6 +650,7 @@ Message passing on interconnect &
 Message passing on interconnect or files on a shared filesystem & Message passing \\\hline
 \end{tabular}
 \caption{Comparison of the features of Parsec, SWIFT/T and Legion dataflow languages}.
+\label{tab:dataflowcomparision}
 \end{table}
 
 \section{The SKA SDP Dataflow Programs}
@@ -767,6 +772,19 @@ than one compute node up to the size of the compute island. This
 partitioning of the graph ensure that the earliest processing stages
 minimise the movement of the data between islands.
 
+\begin{figure}
+  \begin{centering}
+
+  \includegraphics[width=0.95\textwidth,trim=0 0cm 0 0]{figs/dataflow/Architecture-ExecutionConcept}
+
+\end{centering}
+\caption{Illustration of a possible concept of dataflow system for
+    execution on SDP Compute/Data islands. Thick red arrows show high
+    bandwidth communications inside an island. Thin red show lower
+    bandwidth communications between islands.}
+  \label{fig:dataislandexecmodel}
+\end{figure}
+
 The \underline{actors} will be provided by the {\bf C.4.1 Processing
   Library} and {\bf C.4.4 QA components} of the C.4 Pipeline
 Components element. These will be referentially transparent, have
@@ -775,13 +793,14 @@ mechanism for caching, and access to constant data through the Local
 Telescope Model. The required inputs and the produced outputs will be
 declared in the interface definition of each of these components.
 
-The \underline{channels} will be implemented in the {\bf C.3.1} Data
-Manager, building on top of the {\bf C.2.2} Middleware . The channels
-will be capable of buffering multiple tokens.  The tokens will be
-implemented by the DataObject concept in the {\bf C.3 Data Layer}.
+The \underline{channels} will be implemented in the {\bf C.3.1 Data
+  Manager}, building on top of the {\bf C.2.2} Middleware . The
+channels will be capable of buffering multiple tokens.  The tokens
+will be implemented by the DataObject concept in the {\bf C.3 Data
+  Layer}.
 
-The cluster resource allocation will be done by the {\bf C.2.5}
-Scheduler subsystem in the {\bf C.2} Compute Software Platform system.
+The \underline{cluster resource allocation} will be done by the {\bf
+  C.2.5 Scheduler} subsystem in the Compute Software Platform system.
 
 The initial \underline{static schedule} for the dataflow program will
 be performed by the {\bf C.6.2 Data Flow Manager} system in the
@@ -789,15 +808,15 @@ LMC. This will compute the static part of the schedule and configure
 the data flow from the CSP to match this partitioning. The processing
 time estimator will also be implemented by the Data Flow Manager.
 
-The dataflow programs will be specified by the {\bf C.6.7 Data Flow
-  Models} subsystem of the LMC.  The programming environment for the
-programs and the interface declaration language for the actors will
-also be implemented by the LMC.  The dataflow program for a particular
-observing capability is referred to as the Logical Data Flow Graph to
-reflect the fact that it has not been re-organised to be optimised for
-the cluster architecture that will be used. As previously explained,
-it is likely that this will not be specified as a graph, or even ever
-instantiated in graph form in computer memory.
+The \underline{dataflow programs} will be specified by the {\bf C.6.7
+  Data Flow Models} subsystem of the LMC.  The programming environment
+for the programs and the interface declaration language for the actors
+will also be implemented by the LMC.  The dataflow program for a
+particular observing capability is referred to as the Logical Data
+Flow Graph to reflect the fact that it has not been re-organised to be
+optimised for the cluster architecture that will be used. As
+previously explained, it is likely that this will not be specified as
+a graph, or even ever instantiated in graph form in computer memory.
 
 The execution engine, the dynamic scheduling engine, and the data
 re-organisation engine will be implemented by the {\bf C.3.1 Data
