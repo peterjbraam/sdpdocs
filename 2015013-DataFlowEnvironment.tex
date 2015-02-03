@@ -168,6 +168,7 @@ document, \emph{the applicable documents} shall take precedence.
     \bf{Reference} & \bf{Reference}\\
     \bf{Number} & \\
     \hline
+    AD01 & Science Data Processor Architecture\\\hline
 \end{tabularx}}
 \end{center}
 
@@ -183,9 +184,8 @@ conflict between the contents of the referenced documents and this document,
     \bf{Reference} & \bf{Reference}\\
     \bf{Number} & \\
     \hline
-    RD01 & Science Data Processor Architecture\\\hline
-    RD02 & Science Data Processor Pipelines Element Design Report\\\hline
-    RD03 & COMP Element Design Report\\\hline
+    RD01 & Science Data Processor Pipelines Element Design Report\\\hline
+    RD02 & COMP Element Design Report\\\hline
   \end{tabularx}}
 \end{center}
 
@@ -310,12 +310,12 @@ objects in the graph, is a central conceptual benefit\footnote{The
   accessible from more than one actor. The impact of this can
   generally be reduced by having smaller tokens, i.e., data objects,
   passing on channels. Duplication of data in order to enable scalable
-  parallelism is adopted in the SDP Architecture document as one of
-  the necessary ways of enabling scalability.} of data flow computing
-because the exclusive access to the data objects by defined elements
-of the data flow graph introduces modularity. Indeed, the most common
-problem in multithreading legacy imperative programs is identifying
-concurrent data access.
+  parallelism is adopted in the SDP Architecture document [AD01] as
+  one of the necessary ways of enabling scalability.} of data flow
+computing because the exclusive access to the data objects by defined
+elements of the data flow graph introduces modularity. Indeed, the
+most common problem in multithreading legacy imperative programs is
+identifying concurrent data access.
 
 
 \begin{Example}[A simple dataflow program]
@@ -639,7 +639,7 @@ handling continuum imaging is shown in Figure~\ref{fig:contdataflow}.
     Continuum Imaging pipeline for the SDP (calibration is not
     shown). The green rectangles are the basic computations in this
     description, i.e., the actors. Arrows represent the data
-    dependencies between the actors.  See [RD02] for further
+    dependencies between the actors.  See [RD01] for further
     discussion.}
   \label{fig:contdataflow}
 \end{figure}
@@ -731,7 +731,7 @@ detailed implementation decisions have not yet been made.
 The SDP architecture adopts the dataflow programming model for the
 specification of all of its primary data processing functions. 
 
-The use of the concept of Compute Islands (see [RD03] for details)
+The use of the concept of Compute Islands (see [RD02] for details)
 with have very high-bandwidth communication intra-island and less so
 inter-island strongly suggests that the dataflow program should be at
 least partially {\bf statically scheduled}.  The static schedule will
