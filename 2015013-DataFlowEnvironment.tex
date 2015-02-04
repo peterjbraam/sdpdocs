@@ -48,7 +48,7 @@ rulewidth=1pt, margin=10pt, bgcolor={rgb}{0.98,0.98,1}}]{Example}
 % Author(s)
 \newcommand{\docauthor}{B.\ Nikolic, P.\ Braam\xspace}
 % Lead author (goes in the footer)
-\newcommand{\leadauthor}{B.\ Nikolic\xspace}
+\newcommand{\leadauthor}{B.\ Nikolic \& P.\ Braam\xspace}
 % Release
 \newcommand{\release}{1.0\xspace}
 % Date of the document release, format: Month YYYY (e.g., August 2008)
@@ -201,7 +201,7 @@ Section~\ref{sec:sdp-syst-arch}). This is contrast to some past
 dataflow systems that combined the dataflow model with specialised
 dataflow hardware.
 
-This document does neither recommend detailed choices of features or
+This document does neither recommend detailed choices of features nor
 particular choices of dataflow systems.  Instead, it is concerned with
 an explanation of the high level application of data flow techniques
 to SDP imaging, and requirements for dataflow systems that must or
@@ -243,7 +243,7 @@ are the nodes of the graph and the channels are its edges. As we will
 see momentarily, although such graph is a precise conceptual
 representation of the dataflow program, dataflow programs are not
 usually specified by explicitly instantiating such a graph, but rather
-in a more conventional programming language mechanisms. In fact,
+using more conventional programming language mechanisms. In fact,
 scalable dataflow
 \citep{Bosilca6008964,Wozniak:2012:TDD:2443416.2443421} systems never
 instantiate the full graph but traverse it symbolically and
@@ -256,10 +256,10 @@ sequence of instructions in a dataflow program). Instead, computation
 by the \underline{actors} is triggered by the readiness of
 \underline{data objects} on the inputs of these actors. The arrival of
 the entire object determines readiness: large objects are treated as
-indivisible tokens.  The fact that a computation is triggered does not
-mean it has to begin executing immediately upon the trigger: it could
-be placed in set of ready to execute (“fireable”) actions and executed
-some time later.
+indivisible tokens. The fact that data objects are ready for a
+computation to start does not mean it begins executing immediately;
+such objects and associated actions may be placed in a queue and
+executed some time later.
 
 In {\bf demand-driven} dataflow programs the actions to execute from
 the fireable set are determined by tracing back from the desired
@@ -290,17 +290,19 @@ Nodes in the graph without output channels represent results of the dataflow pro
 All actors and channels may compute concurrently but do not share any
 data objects. The ownership of data objects, i.e. the locality of the
 objects in the graph, is a central conceptual benefit\footnote{The
-  converse of this is that there is a drawback in that the lack of
-  shared data requires duplication of data when they are mutable and
-  accessible from more than one actor. The impact of this can
-  generally be reduced by having smaller tokens, i.e., data objects,
-  passing on channels. Duplication of data in order to enable scalable
-  parallelism is adopted in the SDP Architecture document [AD01] as
-  one of the necessary ways of enabling scalability.} of data flow
-computing because the exclusive access to the data objects by defined
-elements of the data flow graph introduces modularity. Indeed, the
-most common problem in multithreading legacy imperative programs is
-identifying concurrent data access.
+  converse of this is that there is a drawback: when data is mutable
+  it must be copied before it accessible from more than one actor. The
+  copy of read-only data can be avoided by passing a reference within
+  the same address space and dropping it when it is no longer
+  referenced.  The impact of duplication can be reduced by having
+  smaller tokens, i.e., data objects, passing on channels. Duplication
+  of data in order to enable scalable parallelism is adopted in the
+  SDP Architecture document [AD01] as one of the necessary ways of
+  enabling scalability.} of data flow computing because the exclusive
+access to the data objects by defined elements of the data flow graph
+introduces modularity. Indeed, the most common problem in
+multithreading legacy imperative programs is identifying concurrent
+data access.
 
 
 \begin{Example}[A simple dataflow program]
@@ -318,10 +320,10 @@ chunks, allowing N multiple nodes to read the channel in parallel.  In
 pseudo code, a dataflow program doing precisely this can be written
 as:
 \begin{lstlisting}
-master_actor(input:fileName1, 
-             input:fileName2, 
-             input:clusterArchitecture) - schedules the work and starts it
-     ch1, ch2 = open(param:fileName1, N), oepn(param:fileName2, N)
+masterActor(input:fileName1, 
+            input:fileName2, 
+            input:clusterArchitecture) - schedules the work and starts it
+     ch1, ch2 = open(param:fileName1, N), open(param:fileName2, N)
      fork(resource:computeNode, 
           actor:computeActor, 
           channel: ch1, channel: ch2,
@@ -358,7 +360,7 @@ collector actor. Each compute actor opens a channel to read a chunk of
 the vector from a file. When it receives that chunk of the vector – a
 data object from the channel - it adds and sends the sum to its
 output, the collector, which it is told about when spawned.  The
-collector\_actor is told to expect input from the compute actors when
+collectorActor is told to expect input from the compute actors when
 it is spawned. It waits for the partial sums from the compute actors,
 adds them and sends the result back to the master.
 
@@ -435,14 +437,14 @@ resources, and start their execution.
 
 \begin{Example}[A dataflow program with explicit scheduling step]
 
-This is expressed in the pseudo code by modifying the {\tt master\_actor}:
+This is expressed in the pseudo code by modifying the {\tt masterActor}:
 
 \begin{lstlisting}
-master_actor(input:fileName1, 
+masterActor(input:fileName1, 
              input:fileName2, 
              input:clusterArchitecture) - schedules the work and starts it
      N = numberOfProcessors(clusterArchitecture)
-     ch1, ch2 = open(param:fileName1, N), oepn(param:fileName2, N)
+     ch1, ch2 = open(param:fileName1, N), open(param:fileName2, N)
      computeNodes = schedule(N-1, clusterArchitecture)
      collectorNode = schedule(1, clusterArchitecture)
      fork(resource:computeNode, 
@@ -497,7 +499,11 @@ current example we have at least two obvious options if a single actor
 were to crash: one is to ignore it (aka the fail-out model) and inform
 the collector to simply gather the sums that do arrive and ignore the
 absence of the sum from the crashed actor.  The second choice would be
-to inform the master that that the entire program should be aborted.
+to inform the master that that the entire program should be
+aborted. The error handling in a data flow program is simplified
+dramatically in comparison with an imperative program because a
+coordinating actor can handle the consequences of errors or
+unresponsiveness using a small set of recovery strategies.
 
 A refined scheduler may use a model to predict performance and attempt
 to optimize scheduling using the CAD: for example it might find GPU’s
@@ -598,26 +604,30 @@ There are several areas where the SDP design effort must continue to
 explore existing work or through development demonstrate effectiveness
 of data flow programming through further research:
 
-Optimisation across data channels and actors.  As explained we expect
-to obtain optimized kernels, for example for gridding operations for a
-variety of hardware platforms.  It is not unlikely that the efficiency
-of such kernels may be influenced by correct data placement, locality,
-and sorting, which we expect to provide through channels.  An
-effective mechanism must be found through which the kernels make such
-data layout requirements known to the data flow program and/or
-system. This issue becomes particularly tricky if e.g. subsequent
-steps in the pipeline require different optimisations.
+\subsection{Optimisation across data channels and actors}
 
-The data flow program optimization.  Across changes in hardware
-parameters (e.g. available memory capacity or network bandwidth) the
-opportunity exists to (a) change the data flow program, to mutate the
-algorithms and alternatively (b) to change the execution strategies of
-a single data flow program to be optimal for the parameters.  An
-example of case (a) is that with lower memory capacities faceting may
-be a more attractive algorithm for imaging than w-snapshots.  An
-example of (b) is that the generation of GCF’s (particularly when
-considering baseline dependent GCF’s) should likely adapt optimally
-without changing the data flow program that is being executed.
+As explained we expect to obtain optimized kernels, for example for
+gridding operations for a variety of hardware platforms.  It is not
+unlikely that the efficiency of such kernels may be influenced by
+correct data placement, locality, and sorting, which we expect to
+provide through channels.  An effective mechanism must be found
+through which the kernels make such data layout requirements known to
+the data flow program and/or system. This issue becomes particularly
+tricky if e.g. subsequent steps in the pipeline require different
+optimisations.
+
+\subsection{The data flow program optimisation}
+
+Across changes in hardware parameters (e.g. available memory capacity
+or network bandwidth) the opportunity exists to (a) change the data
+flow program, to mutate the algorithms and alternatively (b) to change
+the execution strategies of a single data flow program to be optimal
+for the parameters.  An example of case (a) is that with lower memory
+capacities faceting may be a more attractive algorithm for imaging
+than w-snapshots.  An example of (b) is that the generation of GCF’s
+(particularly when considering baseline dependent GCF’s) should likely
+adapt optimally without changing the data flow program that is being
+executed.
 
 The SDP seeks an environment offering a reasonable number of features
 from both the HPC family of data flow language and the cloud family.
@@ -730,12 +740,11 @@ program. They will be decided by balancing following criteria:
 \end{enumerate}
 
 \subsection{Actors}
-Actors are the processing tasks which are the individual units of
-data-processing in SDP. In particular all non-trivial operations on
-bulk data like visibilities and images will be carried out inside the
-actors. In the example shown in Figure~\ref{fig:contdataflow} data
-processing tasks like gridding, FFTs, image-plane corrections are the
-actors.
+Actors are the individual units of data processing in SDP. In
+particular all non-trivial operations on bulk data like visibilities
+and images will be carried out inside the actors. In the example shown
+in Figure~\ref{fig:contdataflow} data processing tasks like gridding,
+FFTs, image-plane corrections are the actors.
 
 A processing task operates only on the bulk data supplied to it and it
 outputs results into buffer space supplied to it. It has no capability
@@ -788,18 +797,19 @@ Figure~\ref{fig:dataislandexecmodel}.
 \end{figure}
 
 The \underline{actors} will be provided by the {\bf C.4.1 Processing
-  Library} and {\bf C.4.4 QA components} of the C.4 Pipeline
-Components element. These will be referentially transparent, have
-nested parallelism (most likely many-threaded parallelism), a
-mechanism for caching, and access to constant data through the Local
-Telescope Model. The required inputs and the produced outputs will be
-declared in the interface definition of each of these components.
+  Library} and {\bf C.4.4 QA components} of the Pipeline Components
+element. These will be referentially transparent, have nested
+parallelism (most likely many-threaded parallelism), a mechanism for
+caching, and access to constant data through the Local Telescope
+Model. The required inputs and the produced outputs will be declared
+in the interface definition of each of these components.
 
 The \underline{channels} will be implemented in the {\bf C.3.1 Data
-  Manager}, building on top of the {\bf C.2.2} Middleware . The
-channels will be capable of buffering multiple tokens.  The tokens
-will be implemented by the DataObject concept in the {\bf C.3 Data
-  Layer}.
+  Manager} possibly building on top of the {\bf C.2.2 Middleware} or a
+highly-tuned lower level system to be provided by {\bf C.2 Compute
+  Software Platform} . The channels will be capable of buffering
+multiple tokens.  The tokens will be implemented by the DataObject
+concept in the {\bf C.3 Data Layer}.
 
 The \underline{cluster resource allocation} will be done by the {\bf
   C.2.5 Scheduler} subsystem in the Compute Software Platform system.
