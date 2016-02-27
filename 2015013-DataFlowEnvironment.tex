@@ -10,6 +10,7 @@
 \usepackage{thmtools}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{algpseudocode}
+\usepackage{longtable}
 
 \declaretheoremstyle[spaceabove=6pt, spacebelow=6pt,
 headfont=\normalfont\bfseries,
@@ -66,7 +67,7 @@ rulewidth=1pt, margin=10pt, bgcolor={rgb}{0.98,0.98,1}}]{Example}
       \hline
       Name & Designation & Affilitation\\
       \hline
-      B. Nikolic \\
+       \\
       \hline
       Signature \& Date: & & \\
       & & \\
@@ -126,14 +127,13 @@ rulewidth=1pt, margin=10pt, bgcolor={rgb}{0.98,0.98,1}}]{Example}
 % Add here the executive summary
 \sdpsummary
 
-This refines the SDP Summary Architecture Document by working out more detailed requirements and illustrating their implementation in the architecture and in some available data flow systems.  After giving definitions, the requirements are summarized in a table (external to this document), and some 20 of these requirements are studied in more detail through sample discussions of possible implementation (i) conceptually using the architectural concepts, (ii) in Regent / Legion (iii) in the DNA DSL.  We end the paper by mapping the requirements to some of the components in the SDP system.
+This document refines a section of the SDP Summary Architecture Document by providing more information about data flow.  After giving definitions, the requirements are summarized in a table (external to this document), and some 20 of these requirements are studied in more detail through sample discussions of possible implementation (i) conceptually using the architectural concepts, (ii) in Regent / Legion (iii) in the DNA DSL.  We end the paper by mapping the requirements to some of the components in the SDP system.
 
 
 (Section~\ref{sec:dataflow-definitions}) contains further definitions used in our description of data flow requirements and programs. 
-(Section~\ref{sec:dataflow-requirements}) refers to the table and has little content.    We then present a significant set of sample data flow programs in 
+(Section~\ref{sec:dataflow-requirements}) refers to the requirements table. We present a significant set of sample data flow programs in 
 (Section~\ref{sec:dataflow-examples}). The final section describes how our work is relevant to elements of the SDP dataflow, 
 (Section~\ref{sec:dataflow-sdp-application}).
-
 
 \sdpreferencedocs
 
@@ -175,13 +175,31 @@ conflict between the contents of the referenced documents and this document,
 
 % The actual content goes here
 \newpage
-\section{Introduction}
+\section{Structure of this document}
 
-\section{Dataflow Definitions}
+We present an overview of the architecture of a data flow system and its use in section \ref{sec:dataflow-definitions}.  
+
+
+
+
+\section{Architectural overview of data flow}
 \label{sec:dataflow-definitions}
 
-\subsection{Concepts in dataflow programming}
+\subsection{Overview of data flow programming}
 
+A data flow description uses a directed graph where edges are called channels and nodes are called actors.  Channels represent data movement, and possibly multiple channels transport data to actors, and the readiness of the data triggers a computation by the actor.  The outputs of the actor are messages which are sent to other actors. 
+
+Some actors are initial actors and the runtime system sends them a {\em start} message.  Similarly some actors inform the runtime system that they received their messages to indicate completion of the computation.  
+
+Many variations on the data flow model exist.  In some cases actors can perform actions when data has arrived on just one of their input channels, in other cases they require all inputs to be ready.  If the system is to offer high availability, the detection that no data has been received or that an actor has crashed requires intervention by the runtime system.
+
+Pipeline programs are examples of programs that map directly to a data flow description. 
+
+
+
+\subsection{Example}
+
+XXX Should we rewrite it in Regent? 
 
 \begin{Example}[A simple dataflow program]
 
@@ -227,9 +245,11 @@ collectorActor
 
 \end{lstlisting}
 
-
 \end{Example}
 
+\subsubsection{Data flow and sequential programming}
+
+SZTODO: Explain the example above, compare to sequential program, explain iteration space, explain iteration space partitioning, demonstrate possible schedulings.
 
 \subsection{Dataflow languages}
 
@@ -238,41 +258,171 @@ collectorActor
   \item
 
 
-\item 
+ \item 
 \end{enumerate}
 
 
 \section{Dataflow Requirements}
 \label{sec:dataflow-requirements}
 
-\begin{table}
-\begin{tabular}{|p{0.1\textwidth}|p{0.25\textwidth}|p{0.25\textwidth}|p{0.25\textwidth}|}
- \hline
-& Parsec & Swift/T & Legion\\\hline
-Static Scheduling &
-Yes, to the level of the node &
-No, some pinning of variables to control nodes  &
-Yes, via partitions
-\\\hline
-Dynamic Scheduling &
-Within a node only&
-Yes, fully dynamic&
-Yes, in the runtime system\\\hline
-Data-dependent control flow &
-No & Yes & Yes \\\hline
-Actors & Kernels (typically from BLAS) & Kernels, complex procedures or external processes & Procedures \\\hline
-Channels &
-Message passing on interconnect &
-Message passing on interconnect or files on a shared filesystem & Message passing \\\hline
-\end{tabular}
-\caption{Comparison of the features of Parsec, SWIFT/T and Legion dataflow languages}.
-\label{tab:dataflowcomparision}
-\end{table}
 
 \section{The SKA SDP Dataflow Programs}
 \label{sec:dataflow-examples}
 
-\subsection{Granularity of the SDP program}
+\subsection{Slurm Interoperability}
+reference:{\bf RUNTIME.SLURM}
+
+The commandline arguments shall indicate:
+\begin{enumerate}
+    \item number of nodes
+    \item number of processes per node
+    \item number of threads per process
+    \item memory per process
+    \item if a GPU accelerator is used
+    \item what network conduit is used, --net=
+\end{enumerate}
+
+If --net is missing, the number of nodes must be 1 which will be assumed if the --nodes parameters is missing and the program shall run on a single node.
+
+SZ: a shell script to call SLURM and Regent program to display stats.
+
+\subsection{Cluster awareness, Static Scheduling}
+
+The data flow system shall make the programs aware of the cluster architecture.  A sample data flow program will
+
+\begin{enumerate}
+    \item Show it has found the nodes in the cluster
+    \item It will define a tree structure and name the top of the tree the coordinator node where it will run a process at level 0
+    \item Start processes on all level 1 nodes
+    \item The level 1 processes start island groups of other processes at level 2
+    \item The processes at level 2 can have access to $1...N$ cores per process, and $K$ GB of RAM per process. 
+    \item The cluster architecture and process tree with its resources is printed out by the coordinator
+\end{enumerate}
+
+XXX Here I \textit{almost} understand how to do that. Can you give me some use case in the real world?  EACH OF 10 NODES HAS EG 16GB OF RAM AND 12 cores - CREATE 4 ACTORS ON EACH NODE, EACH ACTOR USING 4GB, EACH USING 3 cores.
+
+\subsection{Messaging - bandwidth and latency}
+
+The data flow system shall use a high performance interconnect between processes.  A latency and bandwidth study will demonstrate the utilization of the link.
+
+\begin{enumerate}
+    \item The data flow system will spawn two processes that communicate in a client server fashion.  
+    \item The client will send buffers of $K$ bytes each at least 3 times, where $K=1...2^{32}$.  
+    \item When the buffer has been received, the server process will send a response to the client, upon which the client will send the next buffer.
+    \item The program will print out bandwidth and latency of the communication process.
+\end{enumerate}
+
+
+
+\subsection{Profiling information}
+
+Event and debug logs shall be handled as follows.  Under ~/.df-logs the data flow system will create multiple directories. Filenames surrounded by square brackets will be substituted by values:
+\begin{itemize}
+    \item slurm/[jobid]/ - global parameters and output of the job here - like the nodes on which it is running
+    \item slurm/[jobid]/[network nodeid]/ - log files here
+    \item slurm/[jobid]/[task rank] - a symbolic link to the corresponding network-nodeid directory 
+    \item local/pid’s/ - global parameters and output of the job here
+    \item local/pid’s/nodeid’s/logs
+    \item names/symbolic-links contain a string with [time-job-name-job params] and point to slurm jobid or process id directories
+\end{itemize}
+
+In this milestone we can rely on a shared file system to unify this into a global directory of log / debug / profiling information for the job.
+
+The log files will leverage CPU performance counters, and a similar set of data for GPU.
+
+The debug target and level can be amended dynamically.
+
+\subsection{Dynamic Scheduling}
+
+A program is executing a computation repeatedly using a set of actors.  The actors each consume input sets.   While the program is running, the input sets are adjusted to account for runtime differences in the running actors.
+
+XXX Would gridding (Romein style) be a good example? Partitions of visibility data can be seen as input sets.  NO - GRIDDING IS WAY WAY TOO COMPLICATED.  INPUT SETS ARE ACTUALLY NOT RELEVANT - WHAT IS RELEVANT IS THAT A COORDINATING PROCESS SCHEDULES THE NEXT TASK WHERE RESOURCES ARE AVAILABLE.
+
+\subsection{Binning irregular visibility data for parallelism}
+
+A data flow program reads an HDF5 file with OSKAR simulated data.  While mapping the file into a region, it creates a partition of the region indexed by bins $[u_i, u_i + \delta_i] x [v_j, v_j + \epsilon_j].$  
+
+The program demonstrates through further partitioning, access privileges or other means that it can perform computations on an a first subst of the bins (viz. while tiles on a checkerboard) sets of tiles in parallel, and during a next task on a second set of bins.  The purpose of this demonstration is to acquire knowledge how to avoid atomic additions during gridding.
+
+\subsection{HDF5 inter-operability}
+
+A data flow program can start an actor upon completion of reading an HDF indexed set.  The HDF5 fields will become a Regions fields.  The program shall achieve I/O rates equal to 95\% of the iozone benchmark. 
+SZ: This is different from HDF5 support in FFI section. Here we measure throughput, there we bake up data for subsequent use.
+
+\subsection{Resource Management}
+
+The data flow system shall handle resource management in its scheduling.
+
+\begin{enumerate}
+    \item A program will start 4 actors, two senders running on separate nodes, and two receivers running on a single node.
+    \item Each processes will be allowed to use $K$ bytes of memory.
+    \item Each sender will send $K$ bytes to each receiver, which acknowledges receipt and exits.
+    \item The program will demonstrate that if $K$ is more than $\frac{1}{2}$ of available RAM on the receiving node, the two receiving actors will be scheduled sequentially (to avoid deadlock). \item When $K$ is less than $\frac{1}{2}$ available RAM on the receiver, the two receiving actors will be scheduled concurrently.
+\end{enumerate}
+
+SZTODO: use privileges for this.
+
+\subsection{Algorithmic Expressiveness}
+
+A data flow program will perform a data dependent decision, invoke different actors in the branches of the decision and exit.   Another data flow program will approximate a square root using Newton's algorithm and exit when the square of the result is sufficiently small.
+
+\subsection{Scalability and bi-sectional bandwidth}
+
+The program shall start an actor on each core on a subset of the cluster for a total of at least 15,000 cores.  A communication scheme among the actors will transfer data which should approximate the bi-sectional bandwidth of the cluster with actors.
+
+
+
+\subsection{Failout Actors}
+
+An actor named $\bf C$  collecting data from $k$ other actors to compute $\bf C$'s output can be made aware of the liveness of its $k$-inputs and upon failure of up to $m$ of the $k$ inputs compute a partial answer without an error condition.
+
+XXX Most hard program to implement using Legion. I have some ideas, but it certainly will require modification of Legion code.  SKIP FOR NOW.
+
+\subsection{Data Flow inside MPI}
+
+An MPI program can use data flow.
+
+XXX I read this as "MPI program controls computations with data flow".  A PROGRAM CAN USE MPI COMMUNICATIONS AND LEGION STYLE TASKS (DO NOT TRY THIS IN REGENT).
+
+\subsection{Foreign function interfaces: C++/OpenMP, and MPI programs execute inside Actors} 
+
+An actor in a data flow program shall be able to call C++ functions, parallelized with OpenMP and can leverage MPI programs.
+
+XXX "C/C++ function interface" part should implement FFTW call.  XXX FFTW IS JUST ONE EXAMPLE, KERNELS USING  MPI MESSAGING AND OPENMP & OPENACC ARE MORE IMPORTANT.WE NEED ALL OF THESE PREFERRABLY
+
+\subsubsection{HDF5 Support}
+
+SZTODO: Legion supports "HDF5 attachment" - HDF5 group can become a data hierarchy in Legion. The C++ code: https://github.com/StanfordLegion/legion/tree/stable/test/hdf_attach Write Regent program for generating data for FFW (sine wave).
+
+SZ: Here we prepare data for subsequent use in programs below. This is different from throughput measurement in "HDF5 interoperability" and sets up context for examples below.
+
+\subsubsection{Calling FFTW}
+
+SZTODO: Regent program reads HDF5 data and calls FFTW routine, then finds and reports peak frequency.
+
+\subsubsection{OpenMP kernel in Region program}
+
+SZTODO: Dot product using OpenMP-parallelized loops and HDF5 data from HDF5 support.
+
+\subsubsection{MPI from data flow}
+
+SZTODO: Regent program reading HDF5 data and calling MPI code for distributed dot product.
+
+\subsubsection{OpenACC}
+
+SZTODO: is openacc available on cluster?
+
+\subsection{Support for SMP CPU and GPU}
+
+A data flow program can be created which optionally runs an actor on the GPU and optionally runs another actor on an SMP CPU.
+
+XXX There are already examples of that functionality in Legion (apps/circuit, for one).  MAKE A SUPER SIMPLE EXAMPLE.
+
+\subsection{Distributed Partial Data Transposition}
+
+A first actor creates a Region with a two dimensional index space, naturally ordered row-wise (i.e. subsequent elements rows are contiguous in memory, different rows become contiguous memory segments).  A set of $k$ second actors performs work on $k$ sets of columns of the region.  The data is transfered to the second actors in such a manner that it is contiguous.
+
+
 
 \section{Application of Data Flow to SDP}
 \label{sec:dataflow-sdp-application}
